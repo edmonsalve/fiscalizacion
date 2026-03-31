@@ -15,6 +15,8 @@ La interfaz fue diseñada para ser simple, clara y rápida de usar en terreno.
   Interfaz principal mobile-first.
 - `/var/www/html/fiscalizacion/api/consulta.php`
   Endpoint backend que centraliza las consultas a servicios externos.
+- `/var/www/html/fiscalizacion/api/ocr.php`
+  Endpoint backend para lectura de PPU desde fotografía usando OCR.
 - `/var/www/html/fiscalizacion/api/dcode.png`
   Logo de la marca proveedora.
 - `/var/www/html/fiscalizacion/api/logoPET.png`
@@ -22,13 +24,14 @@ La interfaz fue diseñada para ser simple, clara y rápida de usar en terreno.
 
 ## Flujo funcional
 1. El usuario ingresa la PPU en pantalla.
-2. Opcionalmente puede abrir la cámara o subir una foto como referencia visual.
-3. La interfaz envía la patente al endpoint local `api/consulta.php`.
-4. El backend consulta 3 servicios externos:
+2. Opcionalmente puede capturar o subir una foto.
+3. Si el usuario lo solicita, la interfaz envía la imagen a `api/ocr.php` para intentar leer la PPU.
+4. La interfaz envía la patente al endpoint local `api/consulta.php`.
+5. El backend consulta 3 servicios externos:
    - Permiso de circulación
    - SOAP
    - Revisión técnica
-5. La interfaz muestra:
+6. La interfaz muestra:
    - Resumen general con semáforo por estado
    - Bloque detallado de permiso de circulación
    - Bloque detallado de SOAP
@@ -73,6 +76,14 @@ El archivo `api/consulta.php`:
 - Maneja errores parciales para no interrumpir toda la consulta si un servicio falla.
 - Incluye reintento compatible cuando el certificado SSL del proveedor presenta problemas en el entorno.
 
+El archivo `api/ocr.php`:
+- Recibe una imagen por `POST`.
+- Valida formato de archivo.
+- Preprocesa la imagen con `GD`.
+- Ejecuta `Tesseract OCR` desde PHP.
+- Intenta detectar un texto con patrón de PPU.
+- Aplica una normalización básica para errores típicos de OCR.
+
 ## Comportamiento de la interfaz
 El archivo `index.php`:
 - Está pensado para uso móvil.
@@ -84,6 +95,61 @@ El archivo `index.php`:
   - Verde: información encontrada y favorable
   - Amarillo: observación o dato parcial
   - Rojo: error o sin información
+- Tiene un flujo simplificado de fotografía:
+  - Botón único para capturar o subir foto
+  - Botón para leer la placa desde la imagen
+  - Posibilidad de corregir manualmente antes de consultar
+
+## Instalación del OCR en servidor
+
+### Motor OCR utilizado
+Se utiliza `Tesseract OCR`.
+
+Paquete principal instalado:
+- `tesseract-ocr`
+
+Versión probada en este entorno:
+- `tesseract 5.3.4`
+
+Paquetes asociados instalados:
+- `tesseract-ocr-eng`
+- `tesseract-ocr-osd`
+
+### Instalación en Ubuntu o Debian
+```bash
+sudo apt-get update
+sudo apt-get install -y tesseract-ocr
+```
+
+Opcional para idioma español:
+```bash
+sudo apt-get install -y tesseract-ocr-spa
+```
+
+### Verificación
+```bash
+which tesseract
+tesseract --version
+```
+
+### Requisito para PHP
+El usuario bajo el que corre el servidor web debe poder ejecutar el binario `tesseract`.
+
+La aplicación lo detecta mediante:
+```bash
+command -v tesseract
+```
+
+### Instalación en otros entornos Linux
+En servidores basados en Rocky Linux, AlmaLinux o CentOS, normalmente:
+```bash
+sudo dnf install -y tesseract
+```
+
+En distribuciones más antiguas:
+```bash
+sudo yum install -y tesseract
+```
 
 ## Casos observados en pruebas reales
 - `KJJZ28`
@@ -94,13 +160,15 @@ El archivo `index.php`:
   - Revisión técnica sin información disponible en el servicio consultado
 
 ## Observaciones técnicas
-- La foto tomada o subida actualmente se usa solo como apoyo visual.
-- No se ha implementado OCR para leer la patente automáticamente desde la imagen.
+- La foto puede enviarse al backend para intentar leer automáticamente la PPU.
+- La precisión del OCR depende de luz, enfoque, distancia y ángulo de la fotografía.
+- Puede haber confusiones típicas entre caracteres como `0/O`, `1/I`, `8/B`, `3/J`.
 - El proyecto no usa framework; es PHP puro con HTML, CSS y JavaScript embebido.
 - No existe repositorio Git inicializado en esta carpeta al momento de esta documentación.
 
 ## Posibles mejoras futuras
-- OCR para detectar automáticamente la PPU desde la foto.
+- Mejorar el OCR con recorte específico de zona de placa.
+- Reglas más avanzadas para formato de patente chilena.
 - Caché temporal de consultas.
 - Historial de fiscalizaciones.
 - Exportación de resultados.

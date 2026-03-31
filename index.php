@@ -57,7 +57,7 @@ declare(strict_types=1);
         .brand-strip {
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            justify-content: flex-start;
             gap: 12px;
             margin-bottom: 14px;
             padding: 10px 12px;
@@ -107,6 +107,24 @@ declare(strict_types=1);
             margin-top: 2px;
             font-size: 0.76rem;
             color: var(--muted);
+        }
+
+        .footer-brand {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 18px;
+            color: var(--muted);
+            font-size: 0.78rem;
+        }
+
+        .footer-brand img {
+            display: block;
+            width: auto;
+            height: 18px;
+            object-fit: contain;
+            opacity: 0.9;
         }
 
         .eyebrow {
@@ -215,16 +233,6 @@ declare(strict_types=1);
             text-align: center;
         }
 
-        .camera {
-            display: none;
-            margin-top: 14px;
-            border-radius: 20px;
-            overflow: hidden;
-            background: #eaf8fa;
-            border: 1px solid var(--border);
-        }
-
-        video,
         canvas,
         img.preview {
             width: 100%;
@@ -232,10 +240,34 @@ declare(strict_types=1);
             background: #dff4f5;
         }
 
+        .preview-wrap {
+            display: none;
+            margin-top: 14px;
+            border-radius: 18px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            background: #f7fcfd;
+        }
+
+        .preview-wrap.show {
+            display: block;
+        }
+
+        .compact-hidden {
+            display: none !important;
+        }
+
         .camera-note {
             margin-top: 10px;
             color: var(--muted);
             font-size: 0.84rem;
+            line-height: 1.4;
+        }
+
+        .ocr-note {
+            margin-top: 8px;
+            color: var(--muted);
+            font-size: 0.82rem;
             line-height: 1.4;
         }
 
@@ -443,8 +475,7 @@ declare(strict_types=1);
 
         @media (max-width: 359px) {
             .brand-strip {
-                flex-direction: column;
-                align-items: stretch;
+                align-items: flex-start;
             }
         }
     </style>
@@ -460,13 +491,6 @@ declare(strict_types=1);
                         <span>Fiscalización móvil</span>
                     </div>
                 </div>
-                <div class="brand-group">
-                    <img src="api/dcode.png" alt="Logo Dcode">
-                    <div class="brand-copy">
-                        <strong>Powered by</strong>
-                        <span>dCode</span>
-                    </div>
-                </div>
             </div>
 
             <span class="eyebrow">Consulta Vehicular</span>
@@ -478,35 +502,27 @@ declare(strict_types=1);
 
         <section class="card">
             <h2>Patente</h2>
-            <p class="hint">Escribe la PPU sin espacios ni guiones.</p>
+            <p class="hint" id="hintText">Escribe la PPU sin espacios ni guiones.</p>
 
             <label class="field-label" for="ppu">PPU</label>
             <input id="ppu" name="ppu" type="text" maxlength="8" placeholder="Ej: VVDZ60" autocomplete="off" inputmode="text">
 
-            <div class="actions">
+            <div class="actions" id="primaryActions">
                 <button class="primary" id="searchButton" type="button">Consultar datos</button>
-                <button class="secondary" id="openCameraButton" type="button">Usar cámara</button>
+                <label class="secondary file-label" for="photoInput">Capturar foto</label>
             </div>
 
-            <div class="camera" id="cameraBox">
-                <video id="cameraVideo" playsinline autoplay muted></video>
+            <div class="preview-wrap" id="previewWrap">
                 <canvas id="snapshotCanvas" hidden></canvas>
                 <img class="preview" id="imagePreview" alt="Vista previa de la foto" hidden>
-
-                <div class="camera-actions">
-                    <button class="secondary" id="captureButton" type="button">Tomar foto</button>
-                    <button class="secondary" id="closeCameraButton" type="button">Cerrar cámara</button>
-                </div>
-            </div>
-
-            <div class="actions">
-                <label class="file-label" for="photoInput">Subir foto desde el equipo</label>
-                <button class="secondary" id="clearPhotoButton" type="button">Quitar foto</button>
             </div>
 
             <input id="photoInput" type="file" accept="image/*" capture="environment">
-            <p class="camera-note">
-                La foto queda como referencia visual en pantalla para apoyar la lectura de la PPU. La consulta se realiza con la patente escrita en el campo.
+            <p class="camera-note" id="cameraNote">
+                Usa un solo botón para abrir cámara o elegir una imagen. Al tomar o seleccionar la foto, se sube automáticamente para intentar leer la placa.
+            </p>
+            <p class="ocr-note" id="ocrNote">
+                Si la lectura no coincide, puedes corregir la PPU manualmente antes de consultar.
             </p>
 
             <div class="status" id="statusBox"></div>
@@ -545,21 +561,26 @@ declare(strict_types=1);
                 <div class="result-body" id="prtBody"></div>
             </article>
         </section>
+
+        <footer class="footer-brand">
+            <span>Powered by</span>
+            <img src="api/dcode.png" alt="Logo Dcode">
+            <span>dCode</span>
+        </footer>
     </main>
 
     <script>
         const ppuInput = document.getElementById('ppu');
         const searchButton = document.getElementById('searchButton');
-        const openCameraButton = document.getElementById('openCameraButton');
-        const closeCameraButton = document.getElementById('closeCameraButton');
-        const captureButton = document.getElementById('captureButton');
-        const clearPhotoButton = document.getElementById('clearPhotoButton');
         const photoInput = document.getElementById('photoInput');
         const statusBox = document.getElementById('statusBox');
-        const cameraBox = document.getElementById('cameraBox');
-        const cameraVideo = document.getElementById('cameraVideo');
         const snapshotCanvas = document.getElementById('snapshotCanvas');
         const imagePreview = document.getElementById('imagePreview');
+        const previewWrap = document.getElementById('previewWrap');
+        const primaryActions = document.getElementById('primaryActions');
+        const hintText = document.getElementById('hintText');
+        const cameraNote = document.getElementById('cameraNote');
+        const ocrNote = document.getElementById('ocrNote');
         const permisoCard = document.getElementById('permisoCard');
         const soapCard = document.getElementById('soapCard');
         const prtCard = document.getElementById('prtCard');
@@ -568,8 +589,6 @@ declare(strict_types=1);
         const permisoBody = document.getElementById('permisoBody');
         const soapBody = document.getElementById('soapBody');
         const prtBody = document.getElementById('prtBody');
-
-        let mediaStream = null;
 
         const formatCurrency = (value) => {
             const amount = Number(value);
@@ -585,6 +604,12 @@ declare(strict_types=1);
         };
 
         const sanitizePPU = (value) => value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+        const findCandidatePPU = (text) => {
+            const normalized = sanitizePPU(text.replace(/\s+/g, ''));
+            const matches = normalized.match(/[A-Z]{4}[0-9]{2}|[A-Z]{2}[0-9]{4}|[A-Z]{2}[A-Z0-9]{2}[0-9]{2}/g);
+            return matches ? matches[0] : '';
+        };
 
         const setStatus = (message, type = 'loading') => {
             statusBox.textContent = message;
@@ -744,11 +769,7 @@ declare(strict_types=1);
                     { label: 'Compañía', value: soap.NombreCompania },
                     { label: 'N° póliza', value: soap.NroPoliza },
                     { label: 'Inicio cobertura', value: soap.FechaInicio },
-                    { label: 'Término cobertura', value: soap.FechaTermino },
-                    { label: 'Estado', value: soap.Estado },
-                    { label: 'Glosa', value: soap.Glosa },
-                    { label: 'RUT compañía', value: soap.RutCia },
-                    { label: 'Ticket', value: soap.Ticket }
+                    { label: 'Término cobertura', value: soap.FechaTermino }
                 ])}
             `;
             soapCard.classList.add('show');
@@ -770,14 +791,10 @@ declare(strict_types=1);
                 ${createItems([
                     { label: 'Placa', value: prt.placa },
                     { label: 'Resultado', value: prt.ResultadoPRT },
-                    { label: 'Estado PRT', value: prt.EstadoPRT },
                     { label: 'Fecha revisión', value: prt.FechaPRT },
                     { label: 'Vencimiento', value: prt.fechaVencPRT },
                     { label: 'Comuna PRT', value: prt.ComunaPRT },
-                    { label: 'Código PRT', value: prt.codigoPRT },
-                    { label: 'Certificado', value: prt.certificadoPRT },
-                    { label: 'Ticket', value: prt.Ticket },
-                    { label: 'Fecha ticket', value: prt.fechaTicket }
+                    { label: 'Certificado', value: prt.certificadoPRT }
                 ])}
             `;
             prtCard.classList.add('show');
@@ -794,86 +811,77 @@ declare(strict_types=1);
             prtBody.innerHTML = '';
         };
 
-        const stopCamera = () => {
-            if (mediaStream) {
-                mediaStream.getTracks().forEach((track) => track.stop());
-                mediaStream = null;
-            }
-
-            cameraVideo.srcObject = null;
-            cameraBox.style.display = 'none';
-        };
-
         const showPreview = (source) => {
             imagePreview.src = source;
             imagePreview.hidden = false;
+            previewWrap.classList.add('show');
         };
 
-        openCameraButton.addEventListener('click', async () => {
-            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                setStatus('La cámara no está disponible en este navegador. Puedes subir una foto desde el equipo.', 'error');
+        const hidePreview = () => {
+            imagePreview.src = '';
+            imagePreview.hidden = true;
+            previewWrap.classList.remove('show');
+            snapshotCanvas.width = 0;
+            snapshotCanvas.height = 0;
+        };
+
+        const setCompactView = (enabled) => {
+            hintText.classList.toggle('compact-hidden', enabled);
+            cameraNote.classList.toggle('compact-hidden', enabled);
+            ocrNote.classList.toggle('compact-hidden', enabled);
+            primaryActions.classList.toggle('compact-hidden', enabled);
+            previewWrap.classList.toggle('compact-hidden', enabled);
+        };
+
+        const readPlateFromImage = async () => {
+            const [file] = photoInput.files || [];
+            if (!file || !imagePreview.src || imagePreview.hidden) {
+                setStatus('Primero toma o sube una foto para intentar leer la placa.', 'error');
                 return;
             }
+
+            setStatus('Enviando foto al servidor para leer la placa...', 'loading');
 
             try {
-                mediaStream = await navigator.mediaDevices.getUserMedia({
-                    video: {
-                        facingMode: { ideal: 'environment' }
-                    },
-                    audio: false
+                const formData = new FormData();
+                formData.append('photo', file);
+
+                const response = await fetch('api/ocr.php', {
+                    method: 'POST',
+                    body: formData
                 });
+                const result = await response.json();
 
-                cameraVideo.srcObject = mediaStream;
-                cameraBox.style.display = 'block';
-                imagePreview.hidden = true;
-                clearStatus();
+                if (!response.ok) {
+                    throw new Error(result.message || 'No fue posible procesar la fotografía.');
+                }
+
+                const candidate = findCandidatePPU(result.ppu || result.raw_text || '');
+
+                if (!candidate) {
+                    throw new Error('No pude reconocer una PPU con suficiente claridad. Intenta con una foto más cercana y frontal.');
+                }
+
+                ppuInput.value = candidate;
+                setStatus(`Lectura sugerida: ${candidate}. Revísala antes de consultar.`, 'loading');
             } catch (error) {
-                setStatus('No se pudo abrir la cámara. Revisa los permisos del navegador.', 'error');
+                setStatus(error.message || 'No fue posible leer la placa desde la fotografía.', 'error');
             }
-        });
+        };
 
-        closeCameraButton.addEventListener('click', () => {
-            stopCamera();
-        });
-
-        captureButton.addEventListener('click', () => {
-            if (!mediaStream) {
-                setStatus('Primero abre la cámara para tomar la foto.', 'error');
-                return;
-            }
-
-            const width = cameraVideo.videoWidth;
-            const height = cameraVideo.videoHeight;
-
-            if (!width || !height) {
-                setStatus('La cámara aún se está preparando. Intenta nuevamente en un momento.', 'error');
-                return;
-            }
-
-            snapshotCanvas.width = width;
-            snapshotCanvas.height = height;
-            snapshotCanvas.getContext('2d').drawImage(cameraVideo, 0, 0, width, height);
-            showPreview(snapshotCanvas.toDataURL('image/jpeg', 0.92));
-            stopCamera();
-        });
-
-        photoInput.addEventListener('change', (event) => {
+        photoInput.addEventListener('change', async (event) => {
             const [file] = event.target.files || [];
             if (!file) {
                 return;
             }
 
             const reader = new FileReader();
-            reader.onload = () => showPreview(reader.result);
+            reader.onload = async () => {
+                showPreview(reader.result);
+                await readPlateFromImage();
+            };
             reader.readAsDataURL(file);
-            clearStatus();
-        });
-
-        clearPhotoButton.addEventListener('click', () => {
-            photoInput.value = '';
-            imagePreview.src = '';
-            imagePreview.hidden = true;
-            stopCamera();
+            setStatus('Preparando imagen...', 'loading');
         });
 
         ppuInput.addEventListener('input', () => {
@@ -891,6 +899,7 @@ declare(strict_types=1);
             const ppu = sanitizePPU(ppuInput.value);
             ppuInput.value = ppu;
             resetResults();
+            setCompactView(false);
 
             if (!ppu || ppu.length < 5) {
                 setStatus('Ingresa una PPU válida para consultar.', 'error');
@@ -918,6 +927,7 @@ declare(strict_types=1);
                 renderPermiso(data.permiso);
                 renderSoap(data.soap);
                 renderPrt(data.prt);
+                setCompactView(true);
                 setStatus(`Consulta completada para la PPU ${ppu}.`, 'loading');
             } catch (error) {
                 setStatus(error.message || 'Se produjo un error inesperado.', 'error');
