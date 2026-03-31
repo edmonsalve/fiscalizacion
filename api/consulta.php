@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require dirname(__DIR__) . '/lib/device_auth.php';
+
 header('Content-Type: application/json; charset=utf-8');
 
 $isCli = PHP_SAPI === 'cli';
@@ -12,6 +14,10 @@ if ($requestMethod !== 'POST') {
         'message' => 'Método no permitido.',
     ], JSON_UNESCAPED_UNICODE);
     exit;
+}
+
+if (!$isCli) {
+    requireAuthorizedDeviceJson();
 }
 
 $rawInput = $isCli

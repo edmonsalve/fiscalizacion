@@ -6,6 +6,12 @@ declare(strict_types=1);
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#124f87">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Fiscalizacion">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
     <title>Fiscalización Vehicular</title>
     <style>
         :root {
@@ -179,19 +185,25 @@ declare(strict_types=1);
             font-weight: 700;
         }
 
+        .input,
         input[type="text"] {
             width: 100%;
             padding: 16px 14px;
             border: 1px solid var(--border);
             border-radius: 16px;
-            font-size: 1.25rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
+            font-size: 1rem;
             color: var(--text);
             background: #fffdfa;
         }
 
+        input[type="text"] {
+            font-size: 1.25rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .input:focus,
         input[type="text"]:focus {
             outline: 3px solid rgba(18, 79, 135, 0.18);
             border-color: var(--primary);
@@ -225,6 +237,30 @@ declare(strict_types=1);
 
         .compact-hidden {
             display: none !important;
+        }
+
+        .app-hidden {
+            display: none !important;
+        }
+
+        .enrollment-copy {
+            margin: 0 0 14px;
+            color: var(--muted);
+            line-height: 1.45;
+            font-size: 0.94rem;
+        }
+
+        .device-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: #e8faf6;
+            color: var(--ok);
+            font-size: 0.82rem;
+            font-weight: 700;
         }
 
         .status {
@@ -485,8 +521,29 @@ declare(strict_types=1);
             <p class="intro">
                 Ingresa la patente manualmente para consultar su información.
             </p>
+            <div class="device-badge app-hidden" id="deviceBadge"></div>
         </section>
 
+        <section class="card" id="enrollmentCard">
+            <h2>Activación del equipo</h2>
+            <p class="enrollment-copy">
+                Este dispositivo debe activarse una sola vez con un código entregado por administración. Una vez enrolado, la app quedará lista para uso interno sin pedir login en cada consulta.
+            </p>
+
+            <label class="field-label" for="deviceName">Nombre del equipo</label>
+            <input class="input" id="deviceName" name="deviceName" type="text" placeholder="Ej: Inspección 01 o Móvil 3" autocomplete="off">
+
+            <label class="field-label" for="activationCode" style="margin-top: 14px;">Código de activación</label>
+            <input class="input" id="activationCode" name="activationCode" type="text" maxlength="12" placeholder="Ej: A1B2C3D4" autocomplete="off">
+
+            <div class="actions" style="margin-top: 16px;">
+                <button class="primary" id="enrollButton" type="button">Activar equipo</button>
+            </div>
+
+            <div class="status" id="enrollmentStatus"></div>
+        </section>
+
+        <div id="securedContent" class="app-hidden">
         <section class="card">
             <h2>Patente</h2>
             <p class="hint" id="hintText">Escribe la PPU sin espacios ni guiones.</p>
@@ -540,11 +597,20 @@ declare(strict_types=1);
             <img src="api/dcode.png" alt="Logo Dcode">
             <span>dCode</span>
         </footer>
+        </div>
     </main>
 
     <script>
+        const DEVICE_TOKEN_KEY = 'fiscalizacion_device_token';
         const ppuInput = document.getElementById('ppu');
         const searchButton = document.getElementById('searchButton');
+        const enrollmentCard = document.getElementById('enrollmentCard');
+        const enrollmentStatus = document.getElementById('enrollmentStatus');
+        const enrollButton = document.getElementById('enrollButton');
+        const activationCodeInput = document.getElementById('activationCode');
+        const deviceNameInput = document.getElementById('deviceName');
+        const deviceBadge = document.getElementById('deviceBadge');
+        const securedContent = document.getElementById('securedContent');
         const statusBox = document.getElementById('statusBox');
         const primaryActions = document.getElementById('primaryActions');
         const hintText = document.getElementById('hintText');
@@ -556,6 +622,10 @@ declare(strict_types=1);
         const permisoBody = document.getElementById('permisoBody');
         const soapBody = document.getElementById('soapBody');
         const prtBody = document.getElementById('prtBody');
+
+        const getStoredDeviceToken = () => window.localStorage.getItem(DEVICE_TOKEN_KEY) || '';
+        const setStoredDeviceToken = (token) => window.localStorage.setItem(DEVICE_TOKEN_KEY, token);
+        const clearStoredDeviceToken = () => window.localStorage.removeItem(DEVICE_TOKEN_KEY);
 
         const formatCurrency = (value) => {
             const amount = Number(value);
@@ -586,6 +656,22 @@ declare(strict_types=1);
         const clearStatus = () => {
             statusBox.innerHTML = '';
             statusBox.className = 'status';
+        };
+
+        const setEnrollmentStatus = (message, type = 'loading') => {
+            const spinner = type === 'loading' ? '<span class="status-spinner" aria-hidden="true"></span>' : '';
+            enrollmentStatus.innerHTML = `
+                <div class="status-inner">
+                    ${spinner}
+                    <span class="status-text">${message}</span>
+                </div>
+            `;
+            enrollmentStatus.className = `status show ${type}`;
+        };
+
+        const clearEnrollmentStatus = () => {
+            enrollmentStatus.innerHTML = '';
+            enrollmentStatus.className = 'status';
         };
 
         const createItems = (items) => {
@@ -781,6 +867,44 @@ declare(strict_types=1);
             primaryActions.classList.toggle('compact-hidden', enabled);
         };
 
+        const setAuthorizedUI = (authorized, deviceName = '') => {
+            enrollmentCard.classList.toggle('app-hidden', authorized);
+            securedContent.classList.toggle('app-hidden', !authorized);
+            deviceBadge.classList.toggle('app-hidden', !authorized);
+            deviceBadge.textContent = authorized && deviceName !== '' ? `Equipo autorizado: ${deviceName}` : '';
+        };
+
+        const authHeaders = () => {
+            const token = getStoredDeviceToken();
+            return token !== '' ? { 'X-Device-Token': token } : {};
+        };
+
+        const bootstrapAuthorization = async () => {
+            const token = getStoredDeviceToken();
+            if (token === '') {
+                setAuthorizedUI(false);
+                return;
+            }
+
+            try {
+                const response = await fetch('api/bootstrap.php', {
+                    headers: authHeaders()
+                });
+                const data = await response.json();
+
+                if (!response.ok || !data.authorized) {
+                    clearStoredDeviceToken();
+                    setAuthorizedUI(false);
+                    return;
+                }
+
+                setAuthorizedUI(true, data.device?.name || '');
+            } catch (error) {
+                clearStoredDeviceToken();
+                setAuthorizedUI(false);
+            }
+        };
+
         ppuInput.addEventListener('input', () => {
             ppuInput.value = sanitizePPU(ppuInput.value);
         });
@@ -789,6 +913,46 @@ declare(strict_types=1);
             if (event.key === 'Enter') {
                 event.preventDefault();
                 searchButton.click();
+            }
+        });
+
+        activationCodeInput.addEventListener('input', () => {
+            activationCodeInput.value = activationCodeInput.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+        });
+
+        enrollButton.addEventListener('click', async () => {
+            const activationCode = activationCodeInput.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            const deviceName = deviceNameInput.value.trim();
+
+            if (activationCode.length < 6) {
+                setEnrollmentStatus('Ingresa un código de activación válido.', 'error');
+                return;
+            }
+
+            setEnrollmentStatus('Activando equipo...', 'loading');
+
+            try {
+                const response = await fetch('api/enroll.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        activation_code: activationCode,
+                        device_name: deviceName
+                    })
+                });
+
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.message || 'No fue posible activar este equipo.');
+                }
+
+                setStoredDeviceToken(data.token);
+                setEnrollmentStatus('Equipo activado correctamente.', 'success');
+                await bootstrapAuthorization();
+            } catch (error) {
+                setEnrollmentStatus(error.message || 'No fue posible activar este equipo.', 'error');
             }
         });
 
@@ -809,7 +973,8 @@ declare(strict_types=1);
                 const response = await fetch('api/consulta.php', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        ...authHeaders()
                     },
                     body: JSON.stringify({ ppu })
                 });
@@ -817,6 +982,11 @@ declare(strict_types=1);
                 const data = await response.json();
 
                 if (!response.ok) {
+                    if (data.code === 'device_not_authorized') {
+                        clearStoredDeviceToken();
+                        setAuthorizedUI(false);
+                        throw new Error('Este equipo dejó de estar autorizado. Debe activarse nuevamente.');
+                    }
                     throw new Error(data.message || 'No fue posible completar la consulta.');
                 }
 
@@ -830,6 +1000,14 @@ declare(strict_types=1);
                 setStatus(error.message || 'Se produjo un error inesperado.', 'error');
             }
         });
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(() => {});
+            });
+        }
+
+        bootstrapAuthorization();
     </script>
 </body>
 </html>

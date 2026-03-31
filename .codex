@@ -3,6 +3,7 @@
 ## Resumen
 Aplicación web en PHP orientada a dispositivos móviles para consultar antecedentes vehiculares a partir de una PPU.
 Permite:
+- Activar equipos autorizados mediante enrolamiento por código.
 - Ingresar la patente manualmente.
 - Consultar y mostrar en pantalla, en secciones separadas, permiso de circulación, SOAP y revisión técnica.
 
@@ -10,22 +11,35 @@ La interfaz fue diseñada para ser simple, clara y rápida de usar en terreno.
 
 ## Ubicación de archivos principales
 - `/var/www/html/fiscalizacion/index.php`
-  Interfaz principal mobile-first.
+  Interfaz principal mobile-first con activación de equipo y consulta.
+- `/var/www/html/fiscalizacion/config.php`
+  Configuración general, clave administrativa y conexión a MariaDB.
 - `/var/www/html/fiscalizacion/api/consulta.php`
-  Endpoint backend que centraliza las consultas a servicios externos.
+  Endpoint backend que centraliza las consultas a servicios externos y exige equipo autorizado.
+- `/var/www/html/fiscalizacion/api/bootstrap.php`
+  Endpoint para validar si el dispositivo actual está autorizado.
+- `/var/www/html/fiscalizacion/api/enroll.php`
+  Endpoint para enrolar un equipo con código de activación.
+- `/var/www/html/fiscalizacion/lib/device_auth.php`
+  Librería de acceso a MariaDB, activación y validación de dispositivos.
+- `/var/www/html/fiscalizacion/admin/index.php`
+  Consola administrativa mínima para generar códigos y revocar equipos.
 - `/var/www/html/fiscalizacion/api/dcode.png`
   Logo de la marca proveedora.
 - `/var/www/html/fiscalizacion/api/logoPET.png`
   Logo del cliente.
 
 ## Flujo funcional
-1. El usuario ingresa la PPU en pantalla.
-2. La interfaz envía la patente al endpoint local `api/consulta.php`.
-3. El backend consulta 3 servicios externos:
+1. Un administrador genera un código de activación para el equipo.
+2. En el primer uso, el dispositivo ingresa nombre y código de activación.
+3. La interfaz registra el equipo en `api/enroll.php` y guarda un token local persistente.
+4. Si el equipo está autorizado, la interfaz permite ingresar la PPU.
+5. La interfaz envía la patente al endpoint local `api/consulta.php` junto al token del dispositivo.
+6. El backend consulta 3 servicios externos:
    - Permiso de circulación
    - SOAP
    - Revisión técnica
-4. La interfaz muestra:
+7. La interfaz muestra:
    - Resumen general con semáforo por estado
    - Bloque detallado de permiso de circulación
    - Bloque detallado de SOAP
@@ -65,10 +79,21 @@ Método:
 El archivo `api/consulta.php`:
 - Valida y normaliza la PPU.
 - Recibe peticiones `POST` en JSON.
+- Exige token válido de equipo autorizado.
 - Consulta las 3 APIs externas.
 - Consolida la respuesta en un solo JSON.
 - Maneja errores parciales para no interrumpir toda la consulta si un servicio falla.
 - Incluye reintento compatible cuando el certificado SSL del proveedor presenta problemas en el entorno.
+
+El archivo `api/enroll.php`:
+- Recibe código de activación y nombre del equipo.
+- Valida si el código existe, está activo y no expiró.
+- Genera un token persistente para el dispositivo.
+- Registra el enrolamiento en almacenamiento local.
+
+El archivo `api/bootstrap.php`:
+- Revisa si el dispositivo que abre la app ya tiene un token válido.
+- Permite mostrar u ocultar automáticamente el acceso a la consulta.
 
 ## Comportamiento de la interfaz
 El archivo `index.php`:
@@ -81,6 +106,52 @@ El archivo `index.php`:
   - Verde: información encontrada y favorable
   - Amarillo: observación o dato parcial
   - Rojo: error o sin información
+- Puede instalarse como PWA para uso interno, manteniendo la versión web actual como respaldo operativo.
+- Si el equipo no está enrolado, muestra primero una pantalla de activación.
+- Si el equipo ya está autorizado, habilita directamente la consulta.
+
+## PWA interna
+- Archivo `manifest.json` para instalación en Android/iPhone compatibles.
+- Archivo `sw.js` para cache ligero de la interfaz.
+- Iconos PWA en:
+  - `/var/www/html/fiscalizacion/assets/icons/icon-192.png`
+  - `/var/www/html/fiscalizacion/assets/icons/icon-512.png`
+- La operación web normal sigue disponible como respaldo.
+
+## Enrolamiento de equipos
+
+### Cómo se activa un equipo
+1. El administrador entra a:
+   - `/var/www/html/fiscalizacion/admin/index.php`
+2. Genera un código de activación.
+3. El inspector o funcionario abre la app en el teléfono.
+4. Ingresa un nombre para el equipo y el código entregado.
+5. La app guarda un token local y desde ese momento habilita las consultas sin login diario.
+6. El equipo queda vigente por 30 días desde la fecha de activación.
+
+### Revocación
+- Si un teléfono se pierde o deja de estar autorizado, se puede revocar desde la consola administrativa.
+- Un equipo revocado deja inmediatamente de poder consultar `api/consulta.php`.
+
+### Caducidad
+- La vigencia del equipo enrolado es de `30 días` desde la activación.
+- Al expirar, el sistema cambia su estado a `expired`.
+- Un equipo vencido puede renovarse desde la consola administrativa por otros `30 días`.
+
+### Clave administrativa
+- La clave administrativa se define en:
+  - `/var/www/html/fiscalizacion/config.php`
+- Antes de usar en producción debe cambiarse el valor por defecto o definirse por variable de entorno:
+  - `FISCALIZACION_ADMIN_SECRET`
+
+### Almacenamiento
+- Los datos de activación y equipos se guardan en MariaDB.
+- Base de datos:
+  - `fiscalizacion`
+- Tablas principales:
+  - `activation_codes`
+  - `devices`
+  - `device_events`
 
 ## Casos observados en pruebas reales
 - `KJJZ28`
@@ -92,10 +163,15 @@ El archivo `index.php`:
 
 ## Observaciones técnicas
 - El proyecto no usa framework; es PHP puro con HTML, CSS y JavaScript embebido.
+- La autorización de uso está pensada para control por equipo, no por login diario.
+- El token del dispositivo se almacena localmente en el navegador/PWA del teléfono.
 - No existe repositorio Git inicializado en esta carpeta al momento de esta documentación.
 
 ## Posibles mejoras futuras
 - Captura de imagen y OCR para lectura asistida de la PPU.
+- Panel administrativo con mejor trazabilidad y auditoría.
+- Expiración automática de equipos inactivos.
+- Firma o validación reforzada de tokens por dispositivo.
 - Caché temporal de consultas.
 - Historial de fiscalizaciones.
 - Exportación de resultados.
