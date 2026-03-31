@@ -197,15 +197,13 @@ declare(strict_types=1);
             border-color: var(--primary);
         }
 
-        .actions,
-        .camera-actions {
+        .actions {
             display: grid;
             gap: 10px;
             margin-top: 14px;
         }
 
-        button,
-        .file-label {
+        button {
             border: 0;
             border-radius: 16px;
             padding: 14px 16px;
@@ -216,7 +214,7 @@ declare(strict_types=1);
         }
 
         button:active,
-        .file-label:active {
+        button:active {
             transform: scale(0.98);
         }
 
@@ -225,54 +223,8 @@ declare(strict_types=1);
             color: #fff;
         }
 
-        .secondary,
-        .file-label {
-            background: var(--surface-alt);
-            color: var(--primary-strong);
-            border: 1px solid var(--border);
-            text-align: center;
-        }
-
-        canvas,
-        img.preview {
-            width: 100%;
-            display: block;
-            background: #dff4f5;
-        }
-
-        .preview-wrap {
-            display: none;
-            margin-top: 14px;
-            border-radius: 18px;
-            overflow: hidden;
-            border: 1px solid var(--border);
-            background: #f7fcfd;
-        }
-
-        .preview-wrap.show {
-            display: block;
-        }
-
         .compact-hidden {
             display: none !important;
-        }
-
-        .camera-note {
-            margin-top: 10px;
-            color: var(--muted);
-            font-size: 0.84rem;
-            line-height: 1.4;
-        }
-
-        .ocr-note {
-            margin-top: 8px;
-            color: var(--muted);
-            font-size: 0.82rem;
-            line-height: 1.4;
-        }
-
-        input[type="file"] {
-            display: none;
         }
 
         .status {
@@ -282,6 +234,26 @@ declare(strict_types=1);
             border-radius: 16px;
             font-size: 0.95rem;
             line-height: 1.4;
+        }
+
+        .status-inner {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .status-spinner {
+            width: 18px;
+            height: 18px;
+            border-radius: 999px;
+            border: 3px solid rgba(18, 79, 135, 0.18);
+            border-top-color: var(--primary);
+            animation: spin 0.85s linear infinite;
+            flex: 0 0 18px;
+        }
+
+        .status-text {
+            flex: 1;
         }
 
         .status.show {
@@ -296,6 +268,16 @@ declare(strict_types=1);
         .status.error {
             background: #fff3e9;
             color: #9f6135;
+        }
+
+        .status.success {
+            background: #e8faf6;
+            color: var(--ok);
+        }
+
+        .status.error .status-spinner {
+            border-color: rgba(159, 97, 53, 0.18);
+            border-top-color: #9f6135;
         }
 
         .results {
@@ -462,12 +444,17 @@ declare(strict_types=1);
             font-size: 0.92rem;
         }
 
-        @media (min-width: 480px) {
-            .actions,
-            .camera-actions {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
             }
 
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @media (min-width: 480px) {
             .grid {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
@@ -496,7 +483,7 @@ declare(strict_types=1);
             <span class="eyebrow">Consulta Vehicular</span>
             <h1>Fiscalización por PPU</h1>
             <p class="intro">
-                Ingresa la patente manualmente o toma una foto como apoyo visual.
+                Ingresa la patente manualmente para consultar su información.
             </p>
         </section>
 
@@ -509,21 +496,7 @@ declare(strict_types=1);
 
             <div class="actions" id="primaryActions">
                 <button class="primary" id="searchButton" type="button">Consultar datos</button>
-                <label class="secondary file-label" for="photoInput">Capturar foto</label>
             </div>
-
-            <div class="preview-wrap" id="previewWrap">
-                <canvas id="snapshotCanvas" hidden></canvas>
-                <img class="preview" id="imagePreview" alt="Vista previa de la foto" hidden>
-            </div>
-
-            <input id="photoInput" type="file" accept="image/*" capture="environment">
-            <p class="camera-note" id="cameraNote">
-                Usa un solo botón para abrir cámara o elegir una imagen. Al tomar o seleccionar la foto, se sube automáticamente para intentar leer la placa.
-            </p>
-            <p class="ocr-note" id="ocrNote">
-                Si la lectura no coincide, puedes corregir la PPU manualmente antes de consultar.
-            </p>
 
             <div class="status" id="statusBox"></div>
         </section>
@@ -572,15 +545,9 @@ declare(strict_types=1);
     <script>
         const ppuInput = document.getElementById('ppu');
         const searchButton = document.getElementById('searchButton');
-        const photoInput = document.getElementById('photoInput');
         const statusBox = document.getElementById('statusBox');
-        const snapshotCanvas = document.getElementById('snapshotCanvas');
-        const imagePreview = document.getElementById('imagePreview');
-        const previewWrap = document.getElementById('previewWrap');
         const primaryActions = document.getElementById('primaryActions');
         const hintText = document.getElementById('hintText');
-        const cameraNote = document.getElementById('cameraNote');
-        const ocrNote = document.getElementById('ocrNote');
         const permisoCard = document.getElementById('permisoCard');
         const soapCard = document.getElementById('soapCard');
         const prtCard = document.getElementById('prtCard');
@@ -605,19 +572,19 @@ declare(strict_types=1);
 
         const sanitizePPU = (value) => value.toUpperCase().replace(/[^A-Z0-9]/g, '');
 
-        const findCandidatePPU = (text) => {
-            const normalized = sanitizePPU(text.replace(/\s+/g, ''));
-            const matches = normalized.match(/[A-Z]{4}[0-9]{2}|[A-Z]{2}[0-9]{4}|[A-Z]{2}[A-Z0-9]{2}[0-9]{2}/g);
-            return matches ? matches[0] : '';
-        };
-
         const setStatus = (message, type = 'loading') => {
-            statusBox.textContent = message;
+            const spinner = type === 'loading' ? '<span class="status-spinner" aria-hidden="true"></span>' : '';
+            statusBox.innerHTML = `
+                <div class="status-inner">
+                    ${spinner}
+                    <span class="status-text">${message}</span>
+                </div>
+            `;
             statusBox.className = `status show ${type}`;
         };
 
         const clearStatus = () => {
-            statusBox.textContent = '';
+            statusBox.innerHTML = '';
             statusBox.className = 'status';
         };
 
@@ -738,14 +705,12 @@ declare(strict_types=1);
                 ${createBadge(true, payload.msj_estado)}
                 ${createItems([
                     { label: 'Placa', value: permiso.placa },
+                    { label: 'Nombre', value: permiso.nombre ?? '-' },
                     { label: 'Año pago', value: permiso.aaaa_pago },
                     { label: 'Fecha pago', value: permiso.fecha_pago },
                     { label: 'Forma de pago', value: permiso.formaPago },
                     { label: 'Vencimiento', value: permiso.vencimiento },
-                    { label: 'Total permiso', value: formatCurrency(permiso.totalpermiso) },
-                    { label: 'Cuota', value: formatCurrency(permiso.cuota) },
                     { label: 'Monto a pagar', value: formatCurrency(permiso.apagar) },
-                    { label: 'Estado formulario', value: permiso.estadoForm },
                     { label: 'N° formulario', value: permiso.nroformulario }
                 ])}
             `;
@@ -811,78 +776,10 @@ declare(strict_types=1);
             prtBody.innerHTML = '';
         };
 
-        const showPreview = (source) => {
-            imagePreview.src = source;
-            imagePreview.hidden = false;
-            previewWrap.classList.add('show');
-        };
-
-        const hidePreview = () => {
-            imagePreview.src = '';
-            imagePreview.hidden = true;
-            previewWrap.classList.remove('show');
-            snapshotCanvas.width = 0;
-            snapshotCanvas.height = 0;
-        };
-
         const setCompactView = (enabled) => {
             hintText.classList.toggle('compact-hidden', enabled);
-            cameraNote.classList.toggle('compact-hidden', enabled);
-            ocrNote.classList.toggle('compact-hidden', enabled);
             primaryActions.classList.toggle('compact-hidden', enabled);
-            previewWrap.classList.toggle('compact-hidden', enabled);
         };
-
-        const readPlateFromImage = async () => {
-            const [file] = photoInput.files || [];
-            if (!file || !imagePreview.src || imagePreview.hidden) {
-                setStatus('Primero toma o sube una foto para intentar leer la placa.', 'error');
-                return;
-            }
-
-            setStatus('Enviando foto al servidor para leer la placa...', 'loading');
-
-            try {
-                const formData = new FormData();
-                formData.append('photo', file);
-
-                const response = await fetch('api/ocr.php', {
-                    method: 'POST',
-                    body: formData
-                });
-                const result = await response.json();
-
-                if (!response.ok) {
-                    throw new Error(result.message || 'No fue posible procesar la fotografía.');
-                }
-
-                const candidate = findCandidatePPU(result.ppu || result.raw_text || '');
-
-                if (!candidate) {
-                    throw new Error('No pude reconocer una PPU con suficiente claridad. Intenta con una foto más cercana y frontal.');
-                }
-
-                ppuInput.value = candidate;
-                setStatus(`Lectura sugerida: ${candidate}. Revísala antes de consultar.`, 'loading');
-            } catch (error) {
-                setStatus(error.message || 'No fue posible leer la placa desde la fotografía.', 'error');
-            }
-        };
-
-        photoInput.addEventListener('change', async (event) => {
-            const [file] = event.target.files || [];
-            if (!file) {
-                return;
-            }
-
-            const reader = new FileReader();
-            reader.onload = async () => {
-                showPreview(reader.result);
-                await readPlateFromImage();
-            };
-            reader.readAsDataURL(file);
-            setStatus('Preparando imagen...', 'loading');
-        });
 
         ppuInput.addEventListener('input', () => {
             ppuInput.value = sanitizePPU(ppuInput.value);
@@ -928,7 +825,7 @@ declare(strict_types=1);
                 renderSoap(data.soap);
                 renderPrt(data.prt);
                 setCompactView(true);
-                setStatus(`Consulta completada para la PPU ${ppu}.`, 'loading');
+                setStatus(`Consulta completada para la PPU ${ppu}.`, 'success');
             } catch (error) {
                 setStatus(error.message || 'Se produjo un error inesperado.', 'error');
             }
