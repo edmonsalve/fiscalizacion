@@ -1,0 +1,108 @@
+# App: Fiscalización Vehicular por PPU
+
+## Resumen
+Aplicación web en PHP orientada a dispositivos móviles para consultar antecedentes vehiculares a partir de una PPU.
+Permite:
+- Ingresar la patente manualmente.
+- Tomar una foto con la cámara del dispositivo como apoyo visual.
+- Subir una imagen desde el equipo.
+- Consultar y mostrar en pantalla, en secciones separadas, permiso de circulación, SOAP y revisión técnica.
+
+La interfaz fue diseñada para ser simple, clara y rápida de usar en terreno.
+
+## Ubicación de archivos principales
+- `/var/www/html/fiscalizacion/index.php`
+  Interfaz principal mobile-first.
+- `/var/www/html/fiscalizacion/api/consulta.php`
+  Endpoint backend que centraliza las consultas a servicios externos.
+- `/var/www/html/fiscalizacion/api/dcode.png`
+  Logo de la marca proveedora.
+- `/var/www/html/fiscalizacion/api/logoPET.png`
+  Logo del cliente.
+
+## Flujo funcional
+1. El usuario ingresa la PPU en pantalla.
+2. Opcionalmente puede abrir la cámara o subir una foto como referencia visual.
+3. La interfaz envía la patente al endpoint local `api/consulta.php`.
+4. El backend consulta 3 servicios externos:
+   - Permiso de circulación
+   - SOAP
+   - Revisión técnica
+5. La interfaz muestra:
+   - Resumen general con semáforo por estado
+   - Bloque detallado de permiso de circulación
+   - Bloque detallado de SOAP
+   - Bloque detallado de revisión técnica
+
+## APIs externas integradas
+
+### 1. Permiso de circulación
+URL:
+`https://api.dcode.cl/api/ppu/consultaPPU.php`
+
+Método:
+`POST`
+
+Payload:
+```json
+{
+  "ppu": "VVDZ60"
+}
+```
+
+### 2. SOAP
+URL:
+`https://api.dcode.cl/api/ppu/consultaSOAP.php?ppu=KJJZ28`
+
+Método:
+`GET`
+
+### 3. Revisión técnica
+URL:
+`https://api.dcode.cl/api/ppu/consultaPRT.php?ppu=KJJZ28`
+
+Método:
+`GET`
+
+## Comportamiento del backend
+El archivo `api/consulta.php`:
+- Valida y normaliza la PPU.
+- Recibe peticiones `POST` en JSON.
+- Consulta las 3 APIs externas.
+- Consolida la respuesta en un solo JSON.
+- Maneja errores parciales para no interrumpir toda la consulta si un servicio falla.
+- Incluye reintento compatible cuando el certificado SSL del proveedor presenta problemas en el entorno.
+
+## Comportamiento de la interfaz
+El archivo `index.php`:
+- Está pensado para uso móvil.
+- Usa una estética liviana con colores derivados de la marca:
+  - `#124f87`
+  - `#1cd3c6`
+- Muestra logos de cliente y proveedor en formato compacto.
+- Presenta un resumen general con semáforo:
+  - Verde: información encontrada y favorable
+  - Amarillo: observación o dato parcial
+  - Rojo: error o sin información
+
+## Casos observados en pruebas reales
+- `KJJZ28`
+  - SOAP y revisión técnica con respuesta positiva
+  - Permiso con mensaje de no registrar pago en el año actual
+- `VVDZ60`
+  - Permiso y SOAP con respuesta positiva
+  - Revisión técnica sin información disponible en el servicio consultado
+
+## Observaciones técnicas
+- La foto tomada o subida actualmente se usa solo como apoyo visual.
+- No se ha implementado OCR para leer la patente automáticamente desde la imagen.
+- El proyecto no usa framework; es PHP puro con HTML, CSS y JavaScript embebido.
+- No existe repositorio Git inicializado en esta carpeta al momento de esta documentación.
+
+## Posibles mejoras futuras
+- OCR para detectar automáticamente la PPU desde la foto.
+- Caché temporal de consultas.
+- Historial de fiscalizaciones.
+- Exportación de resultados.
+- Captura de ubicación GPS del dispositivo.
+- Autenticación de usuarios fiscalizadores.
