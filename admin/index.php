@@ -5,6 +5,12 @@ require dirname(__DIR__) . '/lib/device_auth.php';
 
 $message = null;
 $error = null;
+$historyFilters = [
+    'ppu' => trim((string)($_GET['history_ppu'] ?? '')),
+    'device' => trim((string)($_GET['history_device'] ?? '')),
+    'date_from' => trim((string)($_GET['history_date_from'] ?? '')),
+    'date_to' => trim((string)($_GET['history_date_to'] ?? '')),
+];
 
 if (($_POST['action'] ?? '') === 'login') {
     if (!attemptAdminLogin((string)($_POST['admin_secret'] ?? ''))) {
@@ -56,6 +62,7 @@ $codes = isAdminAuthenticated()
         static fn (array $code): bool => ($code['status'] ?? '') !== 'inactive'
     ))
     : [];
+$history = isAdminAuthenticated() ? listFiscalizationHistory($historyFilters) : [];
 ?>
 <!doctype html>
 <html lang="es">
@@ -166,6 +173,33 @@ $codes = isAdminAuthenticated()
                                 </form>
                             <?php endif; ?>
                         </td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+        </section>
+
+        <section class="card">
+            <h2>Historial de fiscalizaciones</h2>
+            <form method="get" class="grid" style="margin-bottom: 16px;">
+                <input type="text" name="history_ppu" placeholder="Filtrar por PPU" value="<?= htmlspecialchars($historyFilters['ppu'], ENT_QUOTES, 'UTF-8') ?>">
+                <input type="text" name="history_device" placeholder="Filtrar por equipo" value="<?= htmlspecialchars($historyFilters['device'], ENT_QUOTES, 'UTF-8') ?>">
+                <input type="date" name="history_date_from" value="<?= htmlspecialchars($historyFilters['date_from'], ENT_QUOTES, 'UTF-8') ?>">
+                <input type="date" name="history_date_to" value="<?= htmlspecialchars($historyFilters['date_to'], ENT_QUOTES, 'UTF-8') ?>">
+                <button type="submit">Filtrar historial</button>
+            </form>
+            <table>
+                <thead>
+                    <tr><th>Fecha y hora</th><th>PPU</th><th>Equipo</th><th>ID equipo</th><th>IP</th></tr>
+                </thead>
+                <tbody>
+                <?php foreach ($history as $item): ?>
+                    <tr>
+                        <td><?= htmlspecialchars((string)($item['consulted_at'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
+                        <td><?= htmlspecialchars((string)($item['ppu'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
+                        <td><?= htmlspecialchars((string)($item['device_name'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
+                        <td><?= htmlspecialchars((string)($item['device_public_id'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
+                        <td><?= htmlspecialchars((string)($item['ip_address'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
                     </tr>
                 <?php endforeach; ?>
                 </tbody>

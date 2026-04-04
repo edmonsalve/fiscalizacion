@@ -109,6 +109,7 @@ function mapActivationCodeRow(array $row): array
 function mapDeviceRow(array $row): array
 {
     return [
+        'db_id' => $row['id'],
         'id' => $row['public_id'],
         'name' => $row['name'],
         'token_hash' => $row['token_hash'],
@@ -121,6 +122,25 @@ function mapDeviceRow(array $row): array
         'activation_label' => $row['activation_label'] ?? null,
         'activation_code_id' => $row['activation_code_public_id'] ?? null,
     ];
+}
+
+/**
+ * @param array<string, mixed> $device
+ */
+function recordFiscalizationHistory(array $device, string $ppu): void
+{
+    $sql = 'INSERT INTO fiscalization_history (device_id, device_public_id, device_name, ppu, consulted_at, ip_address, user_agent)
+            VALUES (?, ?, ?, ?, ?, ?, ?)';
+    $stmt = db()->prepare($sql);
+    $deviceDbId = (int)($device['db_id'] ?? 0);
+    $devicePublicId = (string)($device['id'] ?? '');
+    $deviceName = (string)($device['name'] ?? '');
+    $consultedAt = nowDb();
+    $ipAddress = requestIp();
+    $userAgent = requestUserAgent();
+    $stmt->bind_param('issssss', $deviceDbId, $devicePublicId, $deviceName, $ppu, $consultedAt, $ipAddress, $userAgent);
+    $stmt->execute();
+    $stmt->close();
 }
 
 /**
@@ -382,6 +402,64 @@ function renewDevice(string $deviceId): void
     $stmt->bind_param('sss', $status, $expiresAt, $deviceId);
     $stmt->execute();
     $stmt->close();
+}
+
+/**
+ * @param array<string, string> $filters
+ * @return array<int, array<string, mixed>>
+ */
+function listFiscalizationHistory(array $filters = []): array
+{
+    $sql = 'SELECT device_public_id, device_name, ppu, consulted_at, ip_address
+            FROM fiscalization_history
+            WHERE 1=1';
+    $types = '';
+    $params = [];
+
+    if (($filters['ppu'] ?? '') !== '') {
+        $sql .= ' AND ppu = ?';
+        $types .= 's';
+        $params[] = strtoupper(trim($filters['ppu']));
+    }
+
+    if (($filters['device'] ?? '') !== '') {
+        $sql .= ' AND device_name LIKE ?';
+        $types .= 's';
+        $params[] = '%' . trim($filters['device']) . '%';
+    }
+
+    if (($filters['date_from'] ?? '') !== '') {
+        $sql .= ' AND consulted_at >= ?';
+        $types .= 's';
+        $params[] = trim($filters['date_from']) . ' 00:00:00';
+    }
+
+    if (($filters['date_to'] ?? '') !== '') {
+        $sql .= ' AND consulted_at <= ?';
+        $types .= 's';
+        $params[] = trim($filters['date_to']) . ' 23:59:59';
+    }
+
+    $sql .= ' ORDER BY consulted_at DESC LIMIT 300';
+
+    $stmt = db()->prepare($sql);
+    if ($types !== '') {
+        $stmt->bind_param($types, ...$params);
+    }
+    $stmt->execute();
+    $rows = fetchAllAssoc($stmt);
+    $stmt->close();
+
+    return array_map(
+        static fn (array $row): array => [
+            'device_public_id' => $row['device_public_id'],
+            'device_name' => $row['device_name'],
+            'ppu' => $row['ppu'],
+            'consulted_at' => gmdate('c', strtotime((string)$row['consulted_at'])),
+            'ip_address' => $row['ip_address'],
+        ],
+        $rows
+    );
 }
 
 function requestDeviceToken(): string

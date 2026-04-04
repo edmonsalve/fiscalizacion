@@ -16,8 +16,9 @@ if ($requestMethod !== 'POST') {
     exit;
 }
 
+$authorizedDevice = null;
 if (!$isCli) {
-    requireAuthorizedDeviceJson();
+    $authorizedDevice = requireAuthorizedDeviceJson();
 }
 
 $rawInput = $isCli
@@ -172,5 +173,9 @@ $response = [
         'https://api.dcode.cl/api/ppu/consultaPRT.php?ppu=' . rawurlencode($ppu)
     ),
 ];
+
+if (!$isCli && is_array($authorizedDevice)) {
+    recordFiscalizationHistory($authorizedDevice, $ppu);
+}
 
 echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);

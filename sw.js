@@ -1,12 +1,12 @@
-const CACHE_NAME = 'fiscalizacion-shell-v1';
+const CACHE_NAME = 'fiscalizacion-shell-v3';
 const APP_SHELL = [
-  '/fiscalizacion/',
-  '/fiscalizacion/index.php',
-  '/fiscalizacion/manifest.json',
-  '/fiscalizacion/assets/icons/icon-192.png',
-  '/fiscalizacion/assets/icons/icon-512.png',
-  '/fiscalizacion/api/logoPET.png',
-  '/fiscalizacion/api/dcode.png'
+  '/',
+  '/index.php',
+  '/manifest.json',
+  '/assets/icons/icon-192.png',
+  '/assets/icons/icon-512.png',
+  '/api/logoPET.png',
+  '/api/dcode.png'
 ];
 
 self.addEventListener('install', (event) => {
@@ -36,7 +36,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  if (requestUrl.pathname.startsWith('/fiscalizacion/api/')) {
+  if (requestUrl.pathname.startsWith('/api/')) {
     event.respondWith(
       fetch(event.request).catch(() => {
         return new Response(

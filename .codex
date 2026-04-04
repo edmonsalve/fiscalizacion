@@ -44,6 +44,7 @@ La interfaz fue diseñada para ser simple, clara y rápida de usar en terreno.
    - Bloque detallado de permiso de circulación
    - Bloque detallado de SOAP
    - Bloque detallado de revisión técnica
+8. Cada consulta autorizada queda registrada en el historial de fiscalizaciones.
 
 ## APIs externas integradas
 
@@ -82,6 +83,7 @@ El archivo `api/consulta.php`:
 - Exige token válido de equipo autorizado.
 - Consulta las 3 APIs externas.
 - Consolida la respuesta en un solo JSON.
+- Registra la fiscalización con equipo, PPU, fecha, hora e IP.
 - Maneja errores parciales para no interrumpir toda la consulta si un servicio falla.
 - Incluye reintento compatible cuando el certificado SSL del proveedor presenta problemas en el entorno.
 
@@ -152,6 +154,20 @@ El archivo `index.php`:
   - `activation_codes`
   - `devices`
   - `device_events`
+  - `fiscalization_history`
+
+## Historial de fiscalizaciones
+- Cada consulta guarda:
+  - dispositivo
+  - identificador del equipo
+  - PPU consultada
+  - fecha y hora
+  - IP origen
+- La consola administrativa permite revisar el historial.
+- Filtros disponibles:
+  - por PPU
+  - por nombre de equipo
+  - por rango de fechas
 
 ## Casos observados en pruebas reales
 - `KJJZ28`

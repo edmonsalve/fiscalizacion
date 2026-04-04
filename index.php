@@ -10,8 +10,8 @@ declare(strict_types=1);
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Fiscalizacion">
-    <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
     <title>Fiscalización Vehicular</title>
     <style>
         :root {
@@ -215,6 +215,15 @@ declare(strict_types=1);
             margin-top: 14px;
         }
 
+        .result-actions {
+            display: none;
+            margin-top: 14px;
+        }
+
+        .result-actions.show {
+            display: grid;
+        }
+
         button {
             border: 0;
             border-radius: 16px;
@@ -233,6 +242,18 @@ declare(strict_types=1);
         .primary {
             background: var(--primary);
             color: #fff;
+        }
+
+        .secondary {
+            background: #e7f5fb;
+            color: var(--primary-strong);
+            border: 1px solid var(--border);
+        }
+
+        button:disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+            transform: none;
         }
 
         .compact-hidden {
@@ -555,6 +576,11 @@ declare(strict_types=1);
                 <button class="primary" id="searchButton" type="button">Consultar datos</button>
             </div>
 
+            <div class="actions result-actions" id="resultActions">
+                <button class="secondary" id="refreshButton" type="button" disabled>Refrescar consulta</button>
+                <button class="secondary" id="newSearchButton" type="button">Nueva consulta</button>
+            </div>
+
             <div class="status" id="statusBox"></div>
         </section>
 
@@ -604,6 +630,8 @@ declare(strict_types=1);
         const DEVICE_TOKEN_KEY = 'fiscalizacion_device_token';
         const ppuInput = document.getElementById('ppu');
         const searchButton = document.getElementById('searchButton');
+        const refreshButton = document.getElementById('refreshButton');
+        const newSearchButton = document.getElementById('newSearchButton');
         const enrollmentCard = document.getElementById('enrollmentCard');
         const enrollmentStatus = document.getElementById('enrollmentStatus');
         const enrollButton = document.getElementById('enrollButton');
@@ -613,6 +641,7 @@ declare(strict_types=1);
         const securedContent = document.getElementById('securedContent');
         const statusBox = document.getElementById('statusBox');
         const primaryActions = document.getElementById('primaryActions');
+        const resultActions = document.getElementById('resultActions');
         const hintText = document.getElementById('hintText');
         const permisoCard = document.getElementById('permisoCard');
         const soapCard = document.getElementById('soapCard');
@@ -641,6 +670,11 @@ declare(strict_types=1);
         };
 
         const sanitizePPU = (value) => value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+        const syncRefreshButton = () => {
+            const ppu = sanitizePPU(ppuInput.value);
+            refreshButton.disabled = ppu.length < 5;
+        };
 
         const setStatus = (message, type = 'loading') => {
             const spinner = type === 'loading' ? '<span class="status-spinner" aria-hidden="true"></span>' : '';
@@ -692,6 +726,27 @@ declare(strict_types=1);
         };
 
         const createBadge = (ok, text) => `<div class="badge ${ok ? '' : 'error'}">${text}</div>`;
+
+        const getAreaErrorMessage = (areaLabel, payload, noDataMessage) => {
+            const rawMessage = typeof payload?.msj_estado === 'string'
+                ? payload.msj_estado.trim()
+                : '';
+            const normalized = rawMessage.toLowerCase();
+
+            if (normalized.includes('conectar con el servicio externo')) {
+                return `No se pudo conectar con el sistema externo de ${areaLabel}. Intenta nuevamente en unos minutos.`;
+            }
+
+            if (normalized.includes('respuesta no válida')) {
+                return `El sistema externo de ${areaLabel} respondió con un formato no válido.`;
+            }
+
+            if (rawMessage !== '') {
+                return rawMessage;
+            }
+
+            return noDataMessage;
+        };
 
         const createSummaryItem = (title, tone, detail) => `
             <div class="summary-item">
@@ -771,7 +826,7 @@ declare(strict_types=1);
             if (payload.estado !== 200 || !payload.permiso) {
                 permisoBody.innerHTML = `
                     ${createBadge(false, payload.msj_estado || 'Sin información')}
-                    <p class="empty">No fue posible obtener datos del permiso de circulación.</p>
+                    <p class="empty">${getAreaErrorMessage('permiso de circulación', payload, 'No hay información disponible del permiso de circulación para esta patente.')}</p>
                 `;
                 permisoCard.classList.add('show');
                 return;
@@ -807,7 +862,7 @@ declare(strict_types=1);
             if (payload.estado !== 200 || !Array.isArray(payload.soap) || payload.soap.length === 0) {
                 soapBody.innerHTML = `
                     ${createBadge(false, payload.msj_estado || 'Sin información')}
-                    <p class="empty">No fue posible obtener datos del SOAP.</p>
+                    <p class="empty">${getAreaErrorMessage('SOAP', payload, 'No hay información disponible del SOAP para esta patente.')}</p>
                 `;
                 soapCard.classList.add('show');
                 return;
@@ -830,7 +885,7 @@ declare(strict_types=1);
             if (payload.estado !== 200 || !payload.PRT) {
                 prtBody.innerHTML = `
                     ${createBadge(false, payload.msj_estado || 'Sin información')}
-                    <p class="empty">No fue posible obtener datos de la revisión técnica.</p>
+                    <p class="empty">${getAreaErrorMessage('revisión técnica', payload, 'No hay información disponible de la revisión técnica para esta patente.')}</p>
                 `;
                 prtCard.classList.add('show');
                 return;
@@ -841,6 +896,10 @@ declare(strict_types=1);
                 ${createBadge(true, payload.msj_estado)}
                 ${createItems([
                     { label: 'Placa', value: prt.placa },
+                    { label: 'Marca', value: prt.marca ?? prt.Marca },
+                    { label: 'Modelo', value: prt.modelo ?? prt.Modelo },
+                    { label: 'Número de chasis', value: prt.chasis ?? prt.chassis ?? prt.Chasis ?? prt.Chassis },
+                    { label: 'Número de motor', value: prt.motor ?? prt.Motor },
                     { label: 'Resultado', value: prt.ResultadoPRT },
                     { label: 'Fecha revisión', value: prt.FechaPRT },
                     { label: 'Vencimiento', value: prt.fechaVencPRT },
@@ -865,6 +924,16 @@ declare(strict_types=1);
         const setCompactView = (enabled) => {
             hintText.classList.toggle('compact-hidden', enabled);
             primaryActions.classList.toggle('compact-hidden', enabled);
+            resultActions.classList.toggle('show', enabled);
+        };
+
+        const resetSearchForm = () => {
+            resetResults();
+            clearStatus();
+            ppuInput.value = '';
+            setCompactView(false);
+            syncRefreshButton();
+            ppuInput.focus();
         };
 
         const setAuthorizedUI = (authorized, deviceName = '') => {
@@ -892,7 +961,18 @@ declare(strict_types=1);
                 });
                 const data = await response.json();
 
-                if (!response.ok || !data.authorized) {
+                if (!response.ok && data.code === 'device_not_authorized') {
+                    clearStoredDeviceToken();
+                    setAuthorizedUI(false);
+                    return;
+                }
+
+                if (!response.ok) {
+                    setAuthorizedUI(true);
+                    return;
+                }
+
+                if (!data.authorized) {
                     clearStoredDeviceToken();
                     setAuthorizedUI(false);
                     return;
@@ -900,13 +980,13 @@ declare(strict_types=1);
 
                 setAuthorizedUI(true, data.device?.name || '');
             } catch (error) {
-                clearStoredDeviceToken();
-                setAuthorizedUI(false);
+                setAuthorizedUI(true);
             }
         };
 
         ppuInput.addEventListener('input', () => {
             ppuInput.value = sanitizePPU(ppuInput.value);
+            syncRefreshButton();
         });
 
         ppuInput.addEventListener('keydown', (event) => {
@@ -956,18 +1036,19 @@ declare(strict_types=1);
             }
         });
 
-        searchButton.addEventListener('click', async () => {
+        const runSearch = async (mode = 'search') => {
             const ppu = sanitizePPU(ppuInput.value);
             ppuInput.value = ppu;
             resetResults();
             setCompactView(false);
+            syncRefreshButton();
 
             if (!ppu || ppu.length < 5) {
                 setStatus('Ingresa una PPU válida para consultar.', 'error');
                 return;
             }
 
-            setStatus('Consultando servicios externos...', 'loading');
+            setStatus(mode === 'refresh' ? `Refrescando datos para la PPU ${ppu}...` : 'Consultando servicios externos...', 'loading');
 
             try {
                 const response = await fetch('api/consulta.php', {
@@ -995,10 +1076,22 @@ declare(strict_types=1);
                 renderSoap(data.soap);
                 renderPrt(data.prt);
                 setCompactView(true);
-                setStatus(`Consulta completada para la PPU ${ppu}.`, 'success');
+                setStatus(mode === 'refresh' ? `Consulta actualizada para la PPU ${ppu}.` : `Consulta completada para la PPU ${ppu}.`, 'success');
             } catch (error) {
                 setStatus(error.message || 'Se produjo un error inesperado.', 'error');
             }
+        };
+
+        searchButton.addEventListener('click', async () => {
+            await runSearch('search');
+        });
+
+        refreshButton.addEventListener('click', async () => {
+            await runSearch('refresh');
+        });
+
+        newSearchButton.addEventListener('click', () => {
+            resetSearchForm();
         });
 
         if ('serviceWorker' in navigator) {
@@ -1007,6 +1100,7 @@ declare(strict_types=1);
             });
         }
 
+        syncRefreshButton();
         bootstrapAuthorization();
     </script>
 </body>
