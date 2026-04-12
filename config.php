@@ -11,8 +11,8 @@ return [
         'ppu_api_base_url' => rtrim(getenv('FISCALIZACION_PPU_API_BASE_URL') ?: 'https://apihv.dcode.cl/api/ppu', '/'),
     ],
     'db' => [
-        'host' => 'dev.dcode.cl',
-        'port' => 53306,
+        'host' => 'localhost',
+        'port' => 3306,
         'database' => 'fiscalizacion',
         'username' => 'codex',
         'password' => 'kcm64%VI-9',
