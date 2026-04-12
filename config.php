@@ -6,6 +6,10 @@ return [
     'activation_code_ttl_hours' => 24,
     'device_ttl_days' => 30,
     'app_name' => 'Fiscalizacion Petorca',
+    'public_base_url' => rtrim(getenv('FISCALIZACION_PUBLIC_BASE_URL') ?: 'https://fiscalizacion.dcode.cl', '/'),
+    'external_services' => [
+        'ppu_api_base_url' => rtrim(getenv('FISCALIZACION_PPU_API_BASE_URL') ?: 'https://apihv.dcode.cl/api/ppu', '/'),
+    ],
     'db' => [
         'host' => 'dev.dcode.cl',
         'port' => 53306,

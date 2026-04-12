@@ -1,0 +1,21 @@
+{
+  "name": "fiscalizacion-petorca-mobile",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Contenedor nativo Android/iOS para Fiscalizacion Petorca.",
+  "scripts": {
+    "cap:prepare": "php scripts/build_capacitor_config.php",
+    "cap:sync": "npm run cap:prepare && npx cap sync",
+    "cap:copy": "npm run cap:prepare && npx cap copy",
+    "cap:open:android": "npm run cap:prepare && npx cap open android",
+    "cap:open:ios": "npm run cap:prepare && npx cap open ios",
+    "cap:add:android": "npm run cap:prepare && npx cap add android",
+    "cap:add:ios": "npm run cap:prepare && npx cap add ios"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.0.0",
+    "@capacitor/cli": "^7.0.0",
+    "@capacitor/core": "^7.0.0",
+    "@capacitor/ios": "^7.0.0"
+  }
+}

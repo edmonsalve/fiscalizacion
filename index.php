@@ -133,6 +133,23 @@ declare(strict_types=1);
             opacity: 0.9;
         }
 
+        .footer-links {
+            margin-top: 14px;
+            text-align: center;
+            font-size: 0.82rem;
+        }
+
+        .footer-links a {
+            color: var(--primary);
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        .footer-links a:hover,
+        .footer-links a:focus {
+            text-decoration: underline;
+        }
+
         .eyebrow {
             display: inline-flex;
             padding: 6px 12px;
@@ -496,6 +513,26 @@ declare(strict_types=1);
             color: var(--warn);
         }
 
+        .service-alert {
+            margin-top: 12px;
+            padding: 14px;
+            border: 2px solid #df8a6b;
+            border-radius: 12px;
+            background: #fff2ea;
+            color: #813f25;
+            font-size: 0.94rem;
+            font-weight: 700;
+            line-height: 1.45;
+        }
+
+        .service-alert span {
+            display: block;
+            margin-top: 6px;
+            color: #9f6135;
+            font-size: 0.86rem;
+            font-weight: 600;
+        }
+
         .empty {
             color: var(--muted);
             font-size: 0.92rem;
@@ -623,11 +660,15 @@ declare(strict_types=1);
             <img src="api/dcode.png" alt="Logo Dcode">
             <span>dCode</span>
         </footer>
+        <div class="footer-links">
+            <a href="/privacy-policy.html" target="_blank" rel="noopener noreferrer">Politica de privacidad</a>
+        </div>
         </div>
     </main>
 
     <script>
         const DEVICE_TOKEN_KEY = 'fiscalizacion_device_token';
+        const DEVICE_TOKEN_COOKIE_MAX_AGE = 60 * 60 * 24 * 30;
         const ppuInput = document.getElementById('ppu');
         const searchButton = document.getElementById('searchButton');
         const refreshButton = document.getElementById('refreshButton');
@@ -652,9 +693,113 @@ declare(strict_types=1);
         const soapBody = document.getElementById('soapBody');
         const prtBody = document.getElementById('prtBody');
 
-        const getStoredDeviceToken = () => window.localStorage.getItem(DEVICE_TOKEN_KEY) || '';
-        const setStoredDeviceToken = (token) => window.localStorage.setItem(DEVICE_TOKEN_KEY, token);
-        const clearStoredDeviceToken = () => window.localStorage.removeItem(DEVICE_TOKEN_KEY);
+        const getCookieValue = (name) => {
+            const prefix = `${encodeURIComponent(name)}=`;
+            const entry = document.cookie.split('; ').find((item) => item.startsWith(prefix));
+            return entry ? decodeURIComponent(entry.slice(prefix.length)) : '';
+        };
+
+        const setCookieValue = (name, value, maxAge) => {
+            document.cookie = `${encodeURIComponent(name)}=${encodeURIComponent(value)}; path=/; max-age=${maxAge}; samesite=lax`;
+        };
+
+        const clearCookieValue = (name) => {
+            document.cookie = `${encodeURIComponent(name)}=; path=/; max-age=0; samesite=lax`;
+        };
+
+        const readLegacyStoredDeviceToken = () => {
+            try {
+                const localToken = window.localStorage.getItem(DEVICE_TOKEN_KEY) || '';
+                if (localToken !== '') {
+                    return localToken;
+                }
+            } catch (error) {
+            }
+
+            return getCookieValue(DEVICE_TOKEN_KEY);
+        };
+
+        const writeLegacyStoredDeviceToken = (token) => {
+            try {
+                window.localStorage.setItem(DEVICE_TOKEN_KEY, token);
+            } catch (error) {
+            }
+
+            setCookieValue(DEVICE_TOKEN_KEY, token, DEVICE_TOKEN_COOKIE_MAX_AGE);
+        };
+
+        const clearLegacyStoredDeviceToken = () => {
+            try {
+                window.localStorage.removeItem(DEVICE_TOKEN_KEY);
+            } catch (error) {
+            }
+
+            clearCookieValue(DEVICE_TOKEN_KEY);
+        };
+
+        const getNativeDeviceTokenPlugin = () => {
+            const capacitor = window.Capacitor;
+            if (!capacitor || typeof capacitor.isNativePlatform !== 'function' || !capacitor.isNativePlatform()) {
+                return null;
+            }
+
+            return capacitor.Plugins?.DeviceToken ?? null;
+        };
+
+        const getStoredDeviceToken = async () => {
+            const plugin = getNativeDeviceTokenPlugin();
+
+            if (plugin && typeof plugin.getToken === 'function') {
+                try {
+                    const result = await plugin.getToken();
+                    const nativeToken = typeof result?.token === 'string' ? result.token : '';
+
+                    if (nativeToken !== '') {
+                        return nativeToken;
+                    }
+
+                    const legacyToken = readLegacyStoredDeviceToken();
+                    if (legacyToken !== '' && typeof plugin.setToken === 'function') {
+                        await plugin.setToken({ token: legacyToken });
+                        clearLegacyStoredDeviceToken();
+                        return legacyToken;
+                    }
+
+                    return '';
+                } catch (error) {
+                }
+            }
+
+            return readLegacyStoredDeviceToken();
+        };
+
+        const setStoredDeviceToken = async (token) => {
+            const plugin = getNativeDeviceTokenPlugin();
+
+            if (plugin && typeof plugin.setToken === 'function') {
+                try {
+                    await plugin.setToken({ token });
+                    clearLegacyStoredDeviceToken();
+                    return;
+                } catch (error) {
+                }
+            }
+
+            writeLegacyStoredDeviceToken(token);
+        };
+
+        const clearStoredDeviceToken = async () => {
+            const plugin = getNativeDeviceTokenPlugin();
+
+            if (plugin && typeof plugin.clearToken === 'function') {
+                try {
+                    await plugin.clearToken();
+                } catch (error) {
+                }
+            }
+
+            clearLegacyStoredDeviceToken();
+        };
 
         const formatCurrency = (value) => {
             const amount = Number(value);
@@ -725,9 +870,49 @@ declare(strict_types=1);
             `;
         };
 
+        const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (char) => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        }[char]));
+
         const createBadge = (ok, text) => `<div class="badge ${ok ? '' : 'error'}">${text}</div>`;
 
+        const isExternalUnavailable = (payload, expectedKey) => {
+            if (payload?.external_unavailable === true) {
+                return true;
+            }
+
+            if (payload?.estado && Number(payload.estado) >= 500) {
+                return true;
+            }
+
+            if (expectedKey === 'PRT') {
+                return payload?.estado === 200 && (!payload.PRT || Array.isArray(payload.PRT));
+            }
+
+            return false;
+        };
+
+        const getExternalUnavailableMessage = (areaLabel) => (
+            `El servicio externo de ${areaLabel} no se encuentra disponible. Esto no significa que el permiso esté mal emitido.`
+        );
+
+        const createServiceAlert = (areaLabel, payload) => {
+            const detail = typeof payload?.msj_estado === 'string' && payload.msj_estado.trim() !== ''
+                ? `<span>Detalle técnico: ${escapeHtml(payload.msj_estado.trim())}</span>`
+                : '';
+
+            return `<div class="service-alert">${getExternalUnavailableMessage(areaLabel)}${detail}</div>`;
+        };
+
         const getAreaErrorMessage = (areaLabel, payload, noDataMessage) => {
+            if (isExternalUnavailable(payload, areaLabel === 'revisión técnica' ? 'PRT' : '')) {
+                return getExternalUnavailableMessage(areaLabel);
+            }
+
             const rawMessage = typeof payload?.msj_estado === 'string'
                 ? payload.msj_estado.trim()
                 : '';
@@ -759,6 +944,13 @@ declare(strict_types=1);
         `;
 
         const getPermisoSummary = (payload) => {
+            if (isExternalUnavailable(payload, 'permiso')) {
+                return {
+                    tone: 'red',
+                    detail: getExternalUnavailableMessage('permiso de circulación')
+                };
+            }
+
             if (payload.estado !== 200 || !payload.permiso) {
                 return {
                     tone: 'red',
@@ -780,6 +972,13 @@ declare(strict_types=1);
         };
 
         const getSoapSummary = (payload) => {
+            if (isExternalUnavailable(payload, 'soap')) {
+                return {
+                    tone: 'red',
+                    detail: getExternalUnavailableMessage('SOAP')
+                };
+            }
+
             if (payload.estado !== 200 || !Array.isArray(payload.soap) || payload.soap.length === 0) {
                 return {
                     tone: 'red',
@@ -795,6 +994,13 @@ declare(strict_types=1);
         };
 
         const getPrtSummary = (payload) => {
+            if (isExternalUnavailable(payload, 'PRT')) {
+                return {
+                    tone: 'red',
+                    detail: getExternalUnavailableMessage('revisión técnica')
+                };
+            }
+
             if (payload.estado !== 200 || !payload.PRT || Array.isArray(payload.PRT)) {
                 return {
                     tone: 'red',
@@ -826,7 +1032,9 @@ declare(strict_types=1);
             if (payload.estado !== 200 || !payload.permiso) {
                 permisoBody.innerHTML = `
                     ${createBadge(false, payload.msj_estado || 'Sin información')}
-                    <p class="empty">${getAreaErrorMessage('permiso de circulación', payload, 'No hay información disponible del permiso de circulación para esta patente.')}</p>
+                    ${isExternalUnavailable(payload, 'permiso')
+                        ? createServiceAlert('permiso de circulación', payload)
+                        : `<p class="empty">${getAreaErrorMessage('permiso de circulación', payload, 'No hay información disponible del permiso de circulación para esta patente.')}</p>`}
                 `;
                 permisoCard.classList.add('show');
                 return;
@@ -862,7 +1070,9 @@ declare(strict_types=1);
             if (payload.estado !== 200 || !Array.isArray(payload.soap) || payload.soap.length === 0) {
                 soapBody.innerHTML = `
                     ${createBadge(false, payload.msj_estado || 'Sin información')}
-                    <p class="empty">${getAreaErrorMessage('SOAP', payload, 'No hay información disponible del SOAP para esta patente.')}</p>
+                    ${isExternalUnavailable(payload, 'soap')
+                        ? createServiceAlert('SOAP', payload)
+                        : `<p class="empty">${getAreaErrorMessage('SOAP', payload, 'No hay información disponible del SOAP para esta patente.')}</p>`}
                 `;
                 soapCard.classList.add('show');
                 return;
@@ -885,7 +1095,9 @@ declare(strict_types=1);
             if (payload.estado !== 200 || !payload.PRT) {
                 prtBody.innerHTML = `
                     ${createBadge(false, payload.msj_estado || 'Sin información')}
-                    <p class="empty">${getAreaErrorMessage('revisión técnica', payload, 'No hay información disponible de la revisión técnica para esta patente.')}</p>
+                    ${isExternalUnavailable(payload, 'PRT')
+                        ? createServiceAlert('revisión técnica', payload)
+                        : `<p class="empty">${getAreaErrorMessage('revisión técnica', payload, 'No hay información disponible de la revisión técnica para esta patente.')}</p>`}
                 `;
                 prtCard.classList.add('show');
                 return;
@@ -943,13 +1155,13 @@ declare(strict_types=1);
             deviceBadge.textContent = authorized && deviceName !== '' ? `Equipo autorizado: ${deviceName}` : '';
         };
 
-        const authHeaders = () => {
-            const token = getStoredDeviceToken();
+        const authHeaders = async () => {
+            const token = await getStoredDeviceToken();
             return token !== '' ? { 'X-Device-Token': token } : {};
         };
 
         const bootstrapAuthorization = async () => {
-            const token = getStoredDeviceToken();
+            const token = await getStoredDeviceToken();
             if (token === '') {
                 setAuthorizedUI(false);
                 return;
@@ -957,12 +1169,12 @@ declare(strict_types=1);
 
             try {
                 const response = await fetch('api/bootstrap.php', {
-                    headers: authHeaders()
+                    headers: await authHeaders()
                 });
                 const data = await response.json();
 
                 if (!response.ok && data.code === 'device_not_authorized') {
-                    clearStoredDeviceToken();
+                    await clearStoredDeviceToken();
                     setAuthorizedUI(false);
                     return;
                 }
@@ -973,7 +1185,7 @@ declare(strict_types=1);
                 }
 
                 if (!data.authorized) {
-                    clearStoredDeviceToken();
+                    await clearStoredDeviceToken();
                     setAuthorizedUI(false);
                     return;
                 }
@@ -1028,7 +1240,7 @@ declare(strict_types=1);
                     throw new Error(data.message || 'No fue posible activar este equipo.');
                 }
 
-                setStoredDeviceToken(data.token);
+                await setStoredDeviceToken(data.token);
                 setEnrollmentStatus('Equipo activado correctamente.', 'success');
                 await bootstrapAuthorization();
             } catch (error) {
@@ -1055,7 +1267,7 @@ declare(strict_types=1);
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        ...authHeaders()
+                        ...(await authHeaders())
                     },
                     body: JSON.stringify({ ppu })
                 });
@@ -1064,7 +1276,7 @@ declare(strict_types=1);
 
                 if (!response.ok) {
                     if (data.code === 'device_not_authorized') {
-                        clearStoredDeviceToken();
+                        await clearStoredDeviceToken();
                         setAuthorizedUI(false);
                         throw new Error('Este equipo dejó de estar autorizado. Debe activarse nuevamente.');
                     }

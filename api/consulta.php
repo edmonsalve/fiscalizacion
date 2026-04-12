@@ -44,6 +44,7 @@ function decodeApiResponse(string|false $result, string $fallbackMessage): array
         return [
             'estado' => 500,
             'msj_estado' => $fallbackMessage,
+            'external_unavailable' => true,
         ];
     }
 
@@ -53,10 +54,32 @@ function decodeApiResponse(string|false $result, string $fallbackMessage): array
         return [
             'estado' => 500,
             'msj_estado' => 'El servicio externo devolvió una respuesta no válida.',
+            'external_unavailable' => true,
         ];
     }
 
     return $decoded;
+}
+
+/**
+ * Marca respuestas donde el servicio contesto, pero no con la estructura
+ * esperada para el origen consultado.
+ *
+ * @return array<string, mixed>
+ */
+function normalizeExternalResponse(array $payload, string $service): array
+{
+    if (($payload['external_unavailable'] ?? false) === true) {
+        return $payload;
+    }
+
+    if ($service === 'prt' && (!isset($payload['PRT']) || !is_array($payload['PRT']) || array_is_list($payload['PRT']))) {
+        $payload['estado'] = 503;
+        $payload['msj_estado'] = 'El servicio externo de revisión técnica no se encuentra disponible.';
+        $payload['external_unavailable'] = true;
+    }
+
+    return $payload;
 }
 
 /**
@@ -123,6 +146,7 @@ function requestJson(string $url, string $method = 'GET', ?array $body = null): 
         return [
             'estado' => 500,
             'msj_estado' => 'No fue posible conectar con el servicio externo: ' . $secureResponse['error'],
+            'external_unavailable' => true,
         ];
     }
 
@@ -159,18 +183,21 @@ function requestJson(string $url, string $method = 'GET', ?array $body = null): 
     return decodeApiResponse($result, 'No fue posible conectar con el servicio externo.');
 }
 
+$externalApiBaseUrl = rtrim((string)(appConfig()['external_services']['ppu_api_base_url'] ?? 'https://api.dcode.cl/api/ppu'), '/');
+
 $response = [
     'ppu' => $ppu,
     'permiso' => requestJson(
-        'https://api.dcode.cl/api/ppu/consultaPPU.php',
+        $externalApiBaseUrl . '/consultaPPU.php',
         'POST',
         ['ppu' => $ppu]
     ),
     'soap' => requestJson(
-        'https://api.dcode.cl/api/ppu/consultaSOAP.php?ppu=' . rawurlencode($ppu)
+        $externalApiBaseUrl . '/consultaSOAP.php?ppu=' . rawurlencode($ppu)
     ),
-    'prt' => requestJson(
-        'https://api.dcode.cl/api/ppu/consultaPRT.php?ppu=' . rawurlencode($ppu)
+    'prt' => normalizeExternalResponse(
+        requestJson($externalApiBaseUrl . '/consultaPRT.php?ppu=' . rawurlencode($ppu)),
+        'prt'
     ),
 ];
 

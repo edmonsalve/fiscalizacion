@@ -1,0 +1,15 @@
+{
+    "appId": "cl.petorca.fiscalizacion",
+    "appName": "Fiscalizacion",
+    "webDir": "native-shell",
+    "server": {
+        "url": "https://fiscalizacion.dcode.cl/",
+        "cleartext": false
+    },
+    "android": {
+        "allowMixedContent": false
+    },
+    "ios": {
+        "contentInset": "automatic"
+    }
+}
