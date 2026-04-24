@@ -126,6 +126,11 @@ declare(strict_types=1);
             flex: 1;
         }
 
+        #securedContent {
+            display: grid;
+            gap: 24px;
+        }
+
         .card {
             padding: 22px 20px;
             background: var(--surface);
