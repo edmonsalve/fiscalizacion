@@ -15,20 +15,24 @@ declare(strict_types=1);
     <title>Fiscalización Vehicular</title>
     <style>
         :root {
-            --bg: #eef8fb;
+            --bg: #e4f2f7;
             --surface: #ffffff;
-            --surface-alt: #eefbfa;
+            --surface-alt: #f1f9fd;
             --primary: #124f87;
-            --primary-strong: #0d3d68;
+            --primary-strong: #071c2a;
             --accent: #1cd3c6;
-            --accent-soft: #d9f8f5;
+            --accent-soft: #dffaf7;
             --ok: #168d84;
             --warn: #bc6d3f;
-            --text: #17344f;
+            --warning: #f4a300;
+            --warning-strong: #dd9300;
+            --text: #071c2a;
             --muted: #5f7891;
-            --border: #cfe4ef;
-            --shadow: 0 18px 40px rgba(18, 79, 135, 0.14);
-            --radius: 22px;
+            --border: #e3f0f6;
+            --border-strong: #c7dce8;
+            --shadow: 0 16px 34px rgba(7, 28, 42, 0.14);
+            --radius: 26px;
+            --radius-sm: 18px;
         }
 
         * {
@@ -38,198 +42,205 @@ declare(strict_types=1);
         body {
             margin: 0;
             min-height: 100vh;
-            font-family: "Segoe UI", "Helvetica Neue", sans-serif;
+            font-family: "Aptos", "Trebuchet MS", "Segoe UI", sans-serif;
             color: var(--text);
             background:
-                radial-gradient(circle at top, rgba(28, 211, 198, 0.26), transparent 34%),
-                linear-gradient(180deg, #f4fcfe 0%, #eaf7fb 100%);
+                radial-gradient(circle at top, rgba(255, 255, 255, 0.36), transparent 32%),
+                linear-gradient(180deg, #eef8fb 0%, var(--bg) 42%, #d8eaf1 100%);
         }
 
-        .app {
-            width: min(100%, 520px);
+        .app-shell {
+            width: min(100%, 540px);
             margin: 0 auto;
-            padding: 24px 16px 40px;
-        }
-
-        .hero {
-            background: rgba(255, 255, 255, 0.72);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.7);
-            border-radius: 28px;
-            padding: 22px 18px;
-            box-shadow: var(--shadow);
-        }
-
-        .brand-strip {
+            min-height: 100vh;
             display: flex;
-            align-items: center;
-            justify-content: flex-start;
-            gap: 12px;
-            margin-bottom: 14px;
-            padding: 10px 12px;
-            background: rgba(255, 255, 255, 0.72);
-            border: 1px solid var(--border);
-            border-radius: 18px;
+            flex-direction: column;
         }
 
-        .brand-group {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            min-width: 0;
-        }
-
-        .brand-group img {
-            display: block;
-            width: auto;
-            height: 28px;
-            object-fit: contain;
-        }
-
-        .brand-group.client img {
-            height: 34px;
-        }
-
-        .brand-copy {
-            min-width: 0;
-        }
-
-        .brand-copy strong,
-        .brand-copy span {
-            display: block;
-            white-space: nowrap;
+        .page-header {
+            position: relative;
+            min-height: 250px;
+            padding: 28px 22px 44px;
+            background:
+                radial-gradient(circle at top, rgba(255, 255, 255, 0.2), transparent 34%),
+                linear-gradient(180deg, #27d7cb 0%, var(--accent) 58%, #16c6ba 100%);
             overflow: hidden;
-            text-overflow: ellipsis;
         }
 
-        .brand-copy strong {
-            font-size: 0.78rem;
-            color: var(--primary-strong);
-            letter-spacing: 0.03em;
-            text-transform: uppercase;
-        }
-
-        .brand-copy span {
-            margin-top: 2px;
-            font-size: 0.76rem;
-            color: var(--muted);
-        }
-
-        .footer-brand {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            margin-top: 18px;
-            color: var(--muted);
-            font-size: 0.78rem;
-        }
-
-        .footer-brand img {
-            display: block;
-            width: auto;
-            height: 18px;
-            object-fit: contain;
-            opacity: 0.9;
-        }
-
-        .footer-links {
-            margin-top: 14px;
-            text-align: center;
-            font-size: 0.82rem;
-        }
-
-        .footer-links a {
-            color: var(--primary);
-            font-weight: 700;
-            text-decoration: none;
-        }
-
-        .footer-links a:hover,
-        .footer-links a:focus {
-            text-decoration: underline;
-        }
-
-        .eyebrow {
-            display: inline-flex;
-            padding: 6px 12px;
+        .page-header::before,
+        .page-header::after {
+            content: "";
+            position: absolute;
             border-radius: 999px;
-            background: var(--accent-soft);
-            color: var(--primary-strong);
-            font-size: 0.78rem;
-            font-weight: 700;
-            letter-spacing: 0.04em;
-            text-transform: uppercase;
+            background: rgba(255, 255, 255, 0.12);
+            pointer-events: none;
         }
 
-        h1 {
-            margin: 14px 0 8px;
-            font-size: 1.85rem;
-            line-height: 1.1;
+        .page-header::before {
+            width: 240px;
+            height: 240px;
+            top: -90px;
+            right: -60px;
         }
 
-        .intro {
-            margin: 0;
-            color: var(--muted);
-            font-size: 0.98rem;
-            line-height: 1.5;
+        .page-header::after {
+            width: 180px;
+            height: 180px;
+            left: -80px;
+            bottom: -70px;
+        }
+
+        .hero-inner {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .hero-logo {
+            width: min(180px, 52vw);
+            height: auto;
+            max-height: 162px;
+            object-fit: contain;
+            filter: drop-shadow(0 12px 18px rgba(7, 28, 42, 0.16));
+        }
+
+        .hero-title {
+            margin: 14px 0 0;
+            color: #ffffff;
+            font-size: clamp(1.9rem, 4vw, 2.1rem);
+            line-height: 1.06;
+            letter-spacing: -0.02em;
+        }
+
+        .content-stack {
+            width: 94%;
+            margin: -30px auto 0;
+            position: relative;
+            z-index: 2;
+            display: grid;
+            gap: 18px;
+            padding-bottom: 24px;
+            flex: 1;
         }
 
         .card {
-            margin-top: 18px;
-            padding: 18px;
+            padding: 22px 20px;
             background: var(--surface);
-            border: 1px solid var(--border);
+            border: 1px solid rgba(255, 255, 255, 0.72);
             border-radius: var(--radius);
             box-shadow: var(--shadow);
         }
 
         .card h2 {
-            margin: 0 0 6px;
-            font-size: 1rem;
+            margin: 0 0 8px;
+            font-size: 1.05rem;
+            color: var(--primary-strong);
+            text-transform: uppercase;
+            letter-spacing: -0.01em;
         }
 
-        .hint {
-            margin: 0 0 14px;
+        .card-copy,
+        .hint,
+        .intro-copy {
+            margin: 0 0 18px;
             color: var(--muted);
-            font-size: 0.92rem;
+            font-size: 0.94rem;
+            line-height: 1.45;
+        }
+
+        .device-card {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 18px 16px;
+        }
+
+        .device-brand {
+            flex: 0 0 60px;
+            width: 60px;
+            height: 60px;
+            object-fit: contain;
+        }
+
+        .device-copy {
+            min-width: 0;
+        }
+
+        .device-title,
+        .device-name {
+            display: block;
+            line-height: 1.1;
+            text-transform: uppercase;
+        }
+
+        .device-title {
+            color: var(--primary-strong);
+            font-size: 0.86rem;
+            font-weight: 800;
+            letter-spacing: 0.03em;
+        }
+
+        .device-name {
+            margin-top: 8px;
+            font-size: 1.32rem;
+            font-weight: 800;
+            color: #183656;
+            word-break: break-word;
+        }
+
+        .field-group + .field-group {
+            margin-top: 18px;
         }
 
         .field-label {
             display: block;
-            margin-bottom: 8px;
-            font-size: 0.92rem;
+            margin-bottom: 10px;
+            font-size: 0.94rem;
             font-weight: 700;
+            color: var(--primary-strong);
         }
 
         .input,
         input[type="text"] {
             width: 100%;
-            padding: 16px 14px;
-            border: 1px solid var(--border);
-            border-radius: 16px;
+            min-height: 52px;
+            padding: 14px 16px;
+            border: 1px solid #c7deea;
+            border-radius: 14px;
             font-size: 1rem;
             color: var(--text);
-            background: #fffdfa;
+            background: #ffffff;
         }
 
         input[type="text"] {
-            font-size: 1.25rem;
             font-weight: 700;
-            text-transform: uppercase;
+        }
+
+        #ppu {
+            font-size: 1.25rem;
             letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        #deviceName::placeholder,
+        #activationCode::placeholder,
+        #ppu::placeholder {
+            color: #9b9ea3;
         }
 
         .input:focus,
         input[type="text"]:focus {
-            outline: 3px solid rgba(18, 79, 135, 0.18);
-            border-color: var(--primary);
+            outline: 3px solid rgba(28, 211, 198, 0.18);
+            border-color: var(--accent);
         }
 
         .actions {
             display: grid;
-            gap: 10px;
-            margin-top: 14px;
+            gap: 12px;
+            margin-top: 18px;
         }
 
         .result-actions {
@@ -242,29 +253,44 @@ declare(strict_types=1);
         }
 
         button {
-            border: 0;
-            border-radius: 16px;
-            padding: 14px 16px;
+            border: 1px solid transparent;
+            border-radius: 14px;
+            min-height: 52px;
+            padding: 14px 18px;
             font: inherit;
             font-weight: 700;
             cursor: pointer;
-            transition: transform 0.15s ease, opacity 0.15s ease;
+            transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
         }
 
-        button:active,
         button:active {
             transform: scale(0.98);
         }
 
         .primary {
-            background: var(--primary);
+            background: var(--warning);
+            border-color: var(--warning);
             color: #fff;
+            box-shadow: 0 12px 20px rgba(244, 163, 0, 0.22);
         }
 
         .secondary {
-            background: #e7f5fb;
-            color: var(--primary-strong);
-            border: 1px solid var(--border);
+            background: var(--surface-alt);
+            color: #666666;
+            border-color: var(--border);
+        }
+
+        .primary:hover,
+        .primary:focus-visible {
+            background: var(--warning-strong);
+            border-color: var(--warning-strong);
+            box-shadow: 0 14px 24px rgba(244, 163, 0, 0.26);
+        }
+
+        .secondary:hover,
+        .secondary:focus-visible {
+            border-color: var(--border-strong);
+            box-shadow: 0 8px 18px rgba(18, 79, 135, 0.08);
         }
 
         button:disabled {
@@ -281,31 +307,11 @@ declare(strict_types=1);
             display: none !important;
         }
 
-        .enrollment-copy {
-            margin: 0 0 14px;
-            color: var(--muted);
-            line-height: 1.45;
-            font-size: 0.94rem;
-        }
-
-        .device-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            margin-top: 10px;
-            padding: 8px 12px;
-            border-radius: 999px;
-            background: #e8faf6;
-            color: var(--ok);
-            font-size: 0.82rem;
-            font-weight: 700;
-        }
-
         .status {
             display: none;
             margin-top: 16px;
             padding: 14px 16px;
-            border-radius: 16px;
+            border-radius: var(--radius-sm);
             font-size: 0.95rem;
             line-height: 1.4;
         }
@@ -335,7 +341,7 @@ declare(strict_types=1);
         }
 
         .status.loading {
-            background: #e7f5fb;
+            background: #edf9fe;
             color: var(--primary-strong);
         }
 
@@ -356,14 +362,13 @@ declare(strict_types=1);
 
         .results {
             display: grid;
-            gap: 14px;
-            margin-top: 18px;
+            gap: 18px;
         }
 
         .summary-card {
             display: none;
-            background: rgba(255, 255, 255, 0.84);
-            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.94);
+            border: 1px solid rgba(255, 255, 255, 0.78);
             border-radius: var(--radius);
             box-shadow: var(--shadow);
             overflow: hidden;
@@ -374,13 +379,15 @@ declare(strict_types=1);
         }
 
         .summary-head {
-            padding: 16px 16px 12px;
-            background: linear-gradient(135deg, rgba(18, 79, 135, 0.18), rgba(28, 211, 198, 0.24));
+            padding: 18px 18px 12px;
+            background: linear-gradient(135deg, rgba(18, 79, 135, 0.12), rgba(28, 211, 198, 0.2));
         }
 
         .summary-head h3 {
             margin: 0;
             font-size: 1rem;
+            color: var(--primary-strong);
+            text-transform: uppercase;
         }
 
         .summary-head p {
@@ -391,8 +398,8 @@ declare(strict_types=1);
 
         .summary-body {
             display: grid;
-            gap: 10px;
-            padding: 14px 16px 18px;
+            gap: 12px;
+            padding: 14px 18px 20px;
         }
 
         .summary-item {
@@ -400,8 +407,8 @@ declare(strict_types=1);
             align-items: center;
             justify-content: space-between;
             gap: 12px;
-            padding: 12px 14px;
-            background: #fffdfa;
+            padding: 14px 15px;
+            background: #fbfeff;
             border: 1px solid var(--border);
             border-radius: 14px;
         }
@@ -409,6 +416,7 @@ declare(strict_types=1);
         .summary-copy strong {
             display: block;
             font-size: 0.95rem;
+            color: var(--primary-strong);
         }
 
         .summary-copy span {
@@ -441,8 +449,8 @@ declare(strict_types=1);
 
         .result-card {
             display: none;
-            background: rgba(255, 255, 255, 0.82);
-            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.94);
+            border: 1px solid rgba(255, 255, 255, 0.78);
             border-radius: var(--radius);
             box-shadow: var(--shadow);
             overflow: hidden;
@@ -453,13 +461,15 @@ declare(strict_types=1);
         }
 
         .result-head {
-            padding: 16px 16px 12px;
-            background: linear-gradient(135deg, rgba(18, 79, 135, 0.14), rgba(28, 211, 198, 0.22));
+            padding: 18px 18px 12px;
+            background: linear-gradient(135deg, rgba(18, 79, 135, 0.1), rgba(28, 211, 198, 0.18));
         }
 
         .result-head h3 {
             margin: 0;
             font-size: 1rem;
+            color: var(--primary-strong);
+            text-transform: uppercase;
         }
 
         .result-head p {
@@ -469,17 +479,17 @@ declare(strict_types=1);
         }
 
         .result-body {
-            padding: 14px 16px 18px;
+            padding: 14px 18px 20px;
         }
 
         .grid {
             display: grid;
-            gap: 10px;
+            gap: 12px;
         }
 
         .item {
-            padding: 12px;
-            background: #fffdfa;
+            padding: 14px;
+            background: #fbfeff;
             border: 1px solid var(--border);
             border-radius: 14px;
         }
@@ -488,19 +498,20 @@ declare(strict_types=1);
             display: block;
             font-size: 0.8rem;
             color: var(--muted);
-            margin-bottom: 4px;
+            margin-bottom: 6px;
         }
 
         .item strong {
             font-size: 1rem;
             word-break: break-word;
+            color: var(--primary-strong);
         }
 
         .badge {
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            padding: 8px 12px;
+            padding: 9px 13px;
             border-radius: 999px;
             font-size: 0.84rem;
             font-weight: 700;
@@ -517,7 +528,7 @@ declare(strict_types=1);
             margin-top: 12px;
             padding: 14px;
             border: 2px solid #df8a6b;
-            border-radius: 12px;
+            border-radius: 14px;
             background: #fff2ea;
             color: #813f25;
             font-size: 0.94rem;
@@ -549,121 +560,184 @@ declare(strict_types=1);
         }
 
         @media (min-width: 480px) {
+            .result-actions {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
             .grid {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
         }
 
-        @media (max-width: 359px) {
-            .brand-strip {
+        @media (max-width: 420px) {
+            .page-header {
+                padding-inline: 18px;
+            }
+
+            .content-stack {
+                width: calc(100% - 18px);
+            }
+
+            .card {
+                padding-inline: 16px;
+            }
+
+            .device-card {
                 align-items: flex-start;
             }
+
+            .device-name {
+                font-size: 1.14rem;
+            }
+        }
+
+        .app-footer {
+            padding: 6px 18px 26px;
+            text-align: center;
+        }
+
+        .footer-brand {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            color: var(--primary);
+            font-size: 0.82rem;
+        }
+
+        .footer-brand img {
+            display: block;
+            width: auto;
+            height: 22px;
+            object-fit: contain;
+        }
+
+        .footer-links {
+            margin-top: 10px;
+            font-size: 0.82rem;
+        }
+
+        .footer-links a {
+            color: var(--primary);
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        .footer-links a:hover,
+        .footer-links a:focus {
+            text-decoration: underline;
         }
     </style>
 </head>
 <body>
-    <main class="app">
-        <section class="hero">
-            <div class="brand-strip">
-                <div class="brand-group client">
-                    <img src="api/logoPET.png" alt="Logo del cliente PET">
-                    <div class="brand-copy">
-                        <strong>Municipalidad de Petorca</strong>
-                        <span>Fiscalización móvil</span>
+    <main class="app-shell">
+        <header class="page-header">
+            <div class="hero-inner">
+                <img class="hero-logo" src="docs/images/logoFisca.png" alt="Logo de la aplicación Fiscalización por PPU">
+                <h1 class="hero-title">Fiscalización por PPU</h1>
+            </div>
+        </header>
+
+        <section class="content-stack">
+            <article class="card device-card">
+                <img class="device-brand" src="api/logoPET.png" alt="Escudo Municipalidad de Petorca">
+                <div class="device-copy">
+                    <strong class="device-title" id="deviceStatusTitle">Dispositivo pendiente</strong>
+                    <span class="device-name" id="deviceStatusName">Pendiente de activación</span>
+                </div>
+            </article>
+
+            <section class="card" id="enrollmentCard">
+                <h2>Activación del equipo</h2>
+                <p class="intro-copy">
+                    Este dispositivo debe activarse solo una vez con el código entregado por administración.
+                </p>
+
+                <div class="field-group">
+                    <label class="field-label" for="deviceName">Nombre del fiscalizador</label>
+                    <input class="input" id="deviceName" name="deviceName" type="text" placeholder="INGRESE SU NOMBRE" autocomplete="off">
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label" for="activationCode">Código de activación</label>
+                    <input class="input" id="activationCode" name="activationCode" type="text" maxlength="12" placeholder="EJ: A1B2C3D4" autocomplete="off">
+                </div>
+
+                <div class="actions">
+                    <button class="primary" id="enrollButton" type="button">Activar equipo</button>
+                </div>
+
+                <div class="status" id="enrollmentStatus"></div>
+            </section>
+
+            <div id="securedContent" class="app-hidden">
+                <section class="card">
+                    <h2>Consulta PPU</h2>
+                    <p class="hint" id="hintText">Ingrese PPU sin espacios ni guiones.</p>
+
+                    <div class="field-group">
+                        <label class="field-label" for="ppu">PPU</label>
+                        <input id="ppu" name="ppu" type="text" maxlength="8" placeholder="EJ: KJJK18" autocomplete="off" inputmode="text">
                     </div>
-                </div>
-            </div>
 
-            <span class="eyebrow">Consulta Vehicular</span>
-            <h1>Fiscalización por PPU</h1>
-            <p class="intro">
-                Ingresa la patente manualmente para consultar su información.
-            </p>
-            <div class="device-badge app-hidden" id="deviceBadge"></div>
+                    <div class="actions" id="primaryActions">
+                        <button class="primary" id="searchButton" type="button">Consultar datos</button>
+                    </div>
+
+                    <div class="actions result-actions" id="resultActions">
+                        <button class="secondary" id="refreshButton" type="button" disabled>Refrescar consulta</button>
+                        <button class="secondary" id="newSearchButton" type="button">Nueva consulta</button>
+                    </div>
+
+                    <div class="status" id="statusBox"></div>
+                </section>
+
+                <section class="results" id="results">
+                    <article class="summary-card" id="summaryCard">
+                        <div class="summary-head">
+                            <h3>Resumen general</h3>
+                            <p>Estado rápido de la documentación consultada</p>
+                        </div>
+                        <div class="summary-body" id="summaryBody"></div>
+                    </article>
+
+                    <article class="result-card" id="permisoCard">
+                        <div class="result-head">
+                            <h3>Permiso de circulación</h3>
+                            <p>Datos de pago y vigencia</p>
+                        </div>
+                        <div class="result-body" id="permisoBody"></div>
+                    </article>
+
+                    <article class="result-card" id="soapCard">
+                        <div class="result-head">
+                            <h3>SOAP</h3>
+                            <p>Seguro obligatorio</p>
+                        </div>
+                        <div class="result-body" id="soapBody"></div>
+                    </article>
+
+                    <article class="result-card" id="prtCard">
+                        <div class="result-head">
+                            <h3>Revisión técnica</h3>
+                            <p>Planta revisora y vigencia</p>
+                        </div>
+                        <div class="result-body" id="prtBody"></div>
+                    </article>
+                </section>
+            </div>
         </section>
 
-        <section class="card" id="enrollmentCard">
-            <h2>Activación del equipo</h2>
-            <p class="enrollment-copy">
-                Este dispositivo debe activarse una sola vez con un código entregado por administración. Una vez enrolado, la app quedará lista para uso interno sin pedir login en cada consulta.
-            </p>
-
-            <label class="field-label" for="deviceName">Nombre del equipo</label>
-            <input class="input" id="deviceName" name="deviceName" type="text" placeholder="Ej: Inspección 01 o Móvil 3" autocomplete="off">
-
-            <label class="field-label" for="activationCode" style="margin-top: 14px;">Código de activación</label>
-            <input class="input" id="activationCode" name="activationCode" type="text" maxlength="12" placeholder="Ej: A1B2C3D4" autocomplete="off">
-
-            <div class="actions" style="margin-top: 16px;">
-                <button class="primary" id="enrollButton" type="button">Activar equipo</button>
+        <footer class="app-footer">
+            <div class="footer-brand">
+                <span>Powered by</span>
+                <img src="api/DC.png" alt="Logo dCode">
+                <span>dCode</span>
             </div>
-
-            <div class="status" id="enrollmentStatus"></div>
-        </section>
-
-        <div id="securedContent" class="app-hidden">
-        <section class="card">
-            <h2>Patente</h2>
-            <p class="hint" id="hintText">Escribe la PPU sin espacios ni guiones.</p>
-
-            <label class="field-label" for="ppu">PPU</label>
-            <input id="ppu" name="ppu" type="text" maxlength="8" placeholder="Ej: VVDZ60" autocomplete="off" inputmode="text">
-
-            <div class="actions" id="primaryActions">
-                <button class="primary" id="searchButton" type="button">Consultar datos</button>
+            <div class="footer-links">
+                <a href="privacy-policy.html" target="_blank" rel="noopener noreferrer">Política de privacidad</a>
             </div>
-
-            <div class="actions result-actions" id="resultActions">
-                <button class="secondary" id="refreshButton" type="button" disabled>Refrescar consulta</button>
-                <button class="secondary" id="newSearchButton" type="button">Nueva consulta</button>
-            </div>
-
-            <div class="status" id="statusBox"></div>
-        </section>
-
-        <section class="results" id="results">
-            <article class="summary-card" id="summaryCard">
-                <div class="summary-head">
-                    <h3>Resumen general</h3>
-                    <p>Estado rápido de la documentación consultada</p>
-                </div>
-                <div class="summary-body" id="summaryBody"></div>
-            </article>
-
-            <article class="result-card" id="permisoCard">
-                <div class="result-head">
-                    <h3>Permiso de circulación</h3>
-                    <p>Datos de pago y vigencia</p>
-                </div>
-                <div class="result-body" id="permisoBody"></div>
-            </article>
-
-            <article class="result-card" id="soapCard">
-                <div class="result-head">
-                    <h3>SOAP</h3>
-                    <p>Seguro obligatorio</p>
-                </div>
-                <div class="result-body" id="soapBody"></div>
-            </article>
-
-            <article class="result-card" id="prtCard">
-                <div class="result-head">
-                    <h3>Revisión técnica</h3>
-                    <p>Planta revisora y vigencia</p>
-                </div>
-                <div class="result-body" id="prtBody"></div>
-            </article>
-        </section>
-
-        <footer class="footer-brand">
-            <span>Powered by</span>
-            <img src="api/dcode.png" alt="Logo Dcode">
-            <span>dCode</span>
         </footer>
-        <div class="footer-links">
-            <a href="/privacy-policy.html" target="_blank" rel="noopener noreferrer">Politica de privacidad</a>
-        </div>
-        </div>
     </main>
 
     <script>
@@ -678,7 +752,8 @@ declare(strict_types=1);
         const enrollButton = document.getElementById('enrollButton');
         const activationCodeInput = document.getElementById('activationCode');
         const deviceNameInput = document.getElementById('deviceName');
-        const deviceBadge = document.getElementById('deviceBadge');
+        const deviceStatusTitle = document.getElementById('deviceStatusTitle');
+        const deviceStatusName = document.getElementById('deviceStatusName');
         const securedContent = document.getElementById('securedContent');
         const statusBox = document.getElementById('statusBox');
         const primaryActions = document.getElementById('primaryActions');
@@ -692,6 +767,31 @@ declare(strict_types=1);
         const permisoBody = document.getElementById('permisoBody');
         const soapBody = document.getElementById('soapBody');
         const prtBody = document.getElementById('prtBody');
+        const API_BASE_URL = window.location.origin;
+
+        const apiUrl = (path) => new URL(path, `${API_BASE_URL}/`).toString();
+
+        const fetchJson = async (path, options = {}, timeoutMs = 25000) => {
+            const controller = new AbortController();
+            const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+
+            try {
+                const response = await fetch(apiUrl(path), {
+                    ...options,
+                    signal: controller.signal
+                });
+                const data = await response.json();
+                return { response, data };
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    throw new Error('La conexión tardó demasiado. Revisa internet e intenta nuevamente.');
+                }
+
+                throw error;
+            } finally {
+                window.clearTimeout(timeoutId);
+            }
+        };
 
         const getCookieValue = (name) => {
             const prefix = `${encodeURIComponent(name)}=`;
@@ -1148,11 +1248,22 @@ declare(strict_types=1);
             ppuInput.focus();
         };
 
+        const setDevicePanel = (authorized, deviceName = '') => {
+            if (authorized) {
+                deviceStatusTitle.textContent = 'Dispositivo autorizado';
+                deviceStatusName.textContent = deviceName !== '' ? deviceName.toUpperCase() : 'Equipo activo';
+                return;
+            }
+
+            const pendingName = deviceName.trim() !== '' ? deviceName.trim().toUpperCase() : 'Pendiente de activación';
+            deviceStatusTitle.textContent = 'Dispositivo pendiente';
+            deviceStatusName.textContent = pendingName;
+        };
+
         const setAuthorizedUI = (authorized, deviceName = '') => {
             enrollmentCard.classList.toggle('app-hidden', authorized);
             securedContent.classList.toggle('app-hidden', !authorized);
-            deviceBadge.classList.toggle('app-hidden', !authorized);
-            deviceBadge.textContent = authorized && deviceName !== '' ? `Equipo autorizado: ${deviceName}` : '';
+            setDevicePanel(authorized, deviceName);
         };
 
         const authHeaders = async () => {
@@ -1168,10 +1279,9 @@ declare(strict_types=1);
             }
 
             try {
-                const response = await fetch('api/bootstrap.php', {
+                const { response, data } = await fetchJson('api/bootstrap.php', {
                     headers: await authHeaders()
                 });
-                const data = await response.json();
 
                 if (!response.ok && data.code === 'device_not_authorized') {
                     await clearStoredDeviceToken();
@@ -1212,6 +1322,12 @@ declare(strict_types=1);
             activationCodeInput.value = activationCodeInput.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
         });
 
+        deviceNameInput.addEventListener('input', () => {
+            if (!enrollmentCard.classList.contains('app-hidden')) {
+                setDevicePanel(false, deviceNameInput.value);
+            }
+        });
+
         enrollButton.addEventListener('click', async () => {
             const activationCode = activationCodeInput.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
             const deviceName = deviceNameInput.value.trim();
@@ -1224,7 +1340,7 @@ declare(strict_types=1);
             setEnrollmentStatus('Activando equipo...', 'loading');
 
             try {
-                const response = await fetch('api/enroll.php', {
+                const { response, data } = await fetchJson('api/enroll.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -1235,7 +1351,6 @@ declare(strict_types=1);
                     })
                 });
 
-                const data = await response.json();
                 if (!response.ok) {
                     throw new Error(data.message || 'No fue posible activar este equipo.');
                 }
@@ -1263,16 +1378,14 @@ declare(strict_types=1);
             setStatus(mode === 'refresh' ? `Refrescando datos para la PPU ${ppu}...` : 'Consultando servicios externos...', 'loading');
 
             try {
-                const response = await fetch('api/consulta.php', {
+                const { response, data } = await fetchJson('api/consulta.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         ...(await authHeaders())
                     },
                     body: JSON.stringify({ ppu })
-                });
-
-                const data = await response.json();
+                }, 35000);
 
                 if (!response.ok) {
                     if (data.code === 'device_not_authorized') {
